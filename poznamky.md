@@ -1,0 +1,3 @@
+
+
+verifikujeme intervalovy citac

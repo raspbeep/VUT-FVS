@@ -1,0 +1,38 @@
+// This class represents the main parts of the verification environment.
+class timer_t_env extends uvm_env;
+
+    // registration of component tools
+    `uvm_component_utils( timer_t_env )
+
+    // main sub-components
+    timer_t_agent m_timer_t_agent_h;
+    timer_t_scoreboard m_scoreboard_h;
+    timer_t_gm m_gold_h;
+
+    // Constructor - creates new instance of this class
+    function new( string name = "m_env_h", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+        super.build_phase( phase );
+        m_timer_t_agent_h = timer_t_agent::type_id::create( "m_timer_t_agent_h", this );
+        m_scoreboard_h = timer_t_scoreboard::type_id::create( "m_scoreboard_h", this );
+        m_gold_h = timer_t_gm::type_id::create( "m_gold_h", this );
+    endfunction: build_phase
+
+    // Connect - create interconnection between child components
+    function void connect_phase( uvm_phase phase );
+        super.connect_phase( phase );
+        // agent monitor => scoreboard (DUT outputs)
+        m_timer_t_agent_h.analysis_port_monitor.connect( m_scoreboard_h.dut_analysis_export );
+        // agent driver => golden reference model (DUT inputs)
+        m_timer_t_agent_h.analysis_port_driver.connect( m_gold_h.analysis_export );
+        // golden reference model => scoreboard (GM outputs)
+        m_gold_h.timer_t_analysis_port.connect( m_scoreboard_h.gold_analysis_export );
+        // now initialize scoreboard attributes
+        m_scoreboard_h.m_gold_h = m_gold_h;
+    endfunction: connect_phase
+
+endclass: timer_t_env
