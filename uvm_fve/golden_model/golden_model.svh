@@ -38,6 +38,7 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
     endfunction: connect_phase
 
     // Write - get all transactions from driver for computing predictions
+    // receive data from driver via analytical port
     function void write( T t );
   		timer_t_transaction out_t;
 

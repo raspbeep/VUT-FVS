@@ -1,4 +1,7 @@
 // analysis implementations to support input from many places
+// makro automaticky prepoji exporty s analytickymi fifami
+// see write_dut, write_gold - spracovanie prijatych dat
+// monitor odosle data do sb, 
 `uvm_analysis_imp_decl( _dut )
 `uvm_analysis_imp_decl( _gold )
 
@@ -31,9 +34,12 @@ class timer_t_scoreboard extends uvm_scoreboard;
     // Build - instantiates child components
     function void build_phase( uvm_phase phase );
         super.build_phase( phase );
+        // data pritecu do analytickeho exportu
         dut_analysis_export = new( "dut_analysis_export", this );
         gold_analysis_export = new( "gold_analysis_export", this );
     endfunction: build_phase
+
+
 
     // Write - store all transactions from DUT ports
     function void write_dut( timer_t_transaction t );
@@ -49,6 +55,8 @@ class timer_t_scoreboard extends uvm_scoreboard;
 
     // comparison in every clock cycle
     function void compare_transaction();
+        // we are comparing on-the-fly, compare if both fifos are not empty
+        // does not matter if either one is faster
         if ( m_gold_fifo.size() && m_dut_fifo.size() ) begin
             timer_t_transaction dut;
             timer_t_transaction gold;

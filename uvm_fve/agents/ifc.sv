@@ -8,6 +8,7 @@ import sv_timer_t_agent_pkg::*;
 // DUT interface pins
 interface itimer_itf( input logic CLK );
 
+    // signals of the virtual interface 1:1
     // member signals
     logic                  RST;
     logic                  P_IRQ;
@@ -50,6 +51,7 @@ interface itimer_itf( input logic CLK );
     endtask: monitor
 
     // monitor - read values on all interface pins asynchronously (no clocking blocks)
+    // after analysis_port.write( dut ) in monitor.run_phase
     task automatic async_monitor( timer_t_transaction t );
         t.RST      = RST;
         t.P_IRQ    = P_IRQ;

@@ -26,15 +26,19 @@ module top;
     end
 
     // Virtual interface
+    // bind of clock to virtual interface signal
     itimer_itf timer_t_if( CLK );
 
     // DUT instance
+    // design we verify
     timer #(
         .TIMER_ADDR_SPACE_BITS(TIMER_ADDR_SPACE_BITS),
         .DATA_WIDTH(DATA_WIDTH),
         .ADDR_WIDTH(ADDR_WIDTH),
         .RST_ACT_LEVEL(RST_ACT_LEVEL)
     )
+    // interconnection between testbench and DUT
+    // signal of the DUT(signal in the virtual interface)
     HDL_DUT_U(
         .CLK(timer_t_if.CLK),
         .RST(timer_t_if.RST),
@@ -75,6 +79,7 @@ module top;
 
         uvm_config_db #(virtual dut_internal_if )::set( null,"","dut_internal_if",top.HDL_DUT_U.ctrl ) ;
         // start of the simulation
+        // launches the name of the particular test to run
         run_test( "timer_t_test" );
     end
 endmodule: top

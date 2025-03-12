@@ -2,6 +2,8 @@
 class timer_t_test extends timer_t_test_base;
 
     // registration of component tools
+    // registration of the given class to factory
+    // factory then create instance of the object
     `uvm_component_utils( timer_t_test )
 
     uvm_sequence_base seq;

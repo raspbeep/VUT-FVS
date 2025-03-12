@@ -7,6 +7,7 @@ class timer_t_env extends uvm_env;
     // main sub-components
     timer_t_agent m_timer_t_agent_h;
     timer_t_scoreboard m_scoreboard_h;
+    // golden (reference) model
     timer_t_gm m_gold_h;
 
     // Constructor - creates new instance of this class
