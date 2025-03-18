@@ -74,20 +74,20 @@ class timer_t_sequence_basic extends timer_t_sequence;
         default_RST = ~RST_ACT_LEVEL;
 
         //setting counter to 0
-        default_ADDRESS = TIMER_CNT;
-        default_REQUEST = CP_REQ_WRITE;
+        default_ADDRESS = TIMER_CNT; // 8'h00
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
         default_DATA_IN = 32'b0;
         create_and_finish_item();
 
         //setting compare to 4
-        default_ADDRESS = TIMER_CMP;
-        default_REQUEST = CP_REQ_WRITE;
+        default_ADDRESS = TIMER_CMP; // 8'h04
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
         default_DATA_IN = 32'b100;
         create_and_finish_item();
 
         //setting control to AUTO_RESTART
-        default_ADDRESS = TIMER_CR;
-        default_REQUEST = CP_REQ_WRITE;
+        default_ADDRESS = TIMER_CR; // 8'h08
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
         default_DATA_IN = 32'b01;
         create_and_finish_item();
 

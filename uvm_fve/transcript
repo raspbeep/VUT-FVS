@@ -1,0 +1,613 @@
+# QuestaSim-64 vcom 2019.4 Compiler 2019.10 Oct 15 2019
+# Start time: 19:14:56 on Mar 18,2025
+# vcom -reportprogress 300 -explicit -2008 -source "+cover=sbcef" -nowarn 13 -work work ../rtl/./timer_fvs.vhd -just pe 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Compiling entity timer
+# End time: 19:14:57 on Mar 18,2025, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 2019.4 Compiler 2019.10 Oct 15 2019
+# Start time: 19:14:57 on Mar 18,2025
+# vcom -reportprogress 300 -explicit -2008 -source "+cover=sbcef" -nowarn 13 -work work ../rtl/./timer_fvs.vhd -skip pec 
+# -- Loading package STANDARD
+# -- Compiling architecture RTL of timer
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Loading entity timer
+# End time: 19:14:57 on Mar 18,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 2019.4 Compiler 2019.10 Oct 15 2019
+# Start time: 19:14:57 on Mar 18,2025
+# vcom -reportprogress 300 -explicit -2008 -source "+cover=sbcef" -nowarn 13 -work work ../rtl/./timer_fvs.vhd -just c 
+# End time: 19:14:57 on Mar 18,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vlog 2019.4 Compiler 2019.10 Oct 15 2019
+# Start time: 19:14:57 on Mar 18,2025
+# vlog -reportprogress 300 -sv -incr -source -timescale 1ps/1ps -work work test_parameters.sv agents/./sv_agent_pkg.sv golden_model/sv_golden_model_pkg.sv env_lib/./sv_env_pkg.sv test_lib/./sv_test_pkg.sv agents/./ifc.sv abv/./abv_timer.sv top_level.sv 
+# ** Note: (vlog-2286) test_parameters.sv(4): Using implicit +incdir+/opt/questasim_2019_4/questasim/uvm-1.1d/../verilog_src/uvm-1.1d/src from import uvm_pkg
+# -- Skipping package sv_param_pkg
+# -- Skipping package sv_timer_t_agent_pkg
+# -- Compiling package sv_timer_t_gm_pkg
+# -- Compiling package sv_timer_t_env_pkg
+# -- Compiling package sv_timer_t_test_pkg
+# -- Skipping interface itimer_itf
+# -- Skipping interface dut_internal_if
+# -- Skipping package ifc_sv_unit
+# -- Skipping module abv_timer
+# -- Skipping package abv_timer_sv_unit
+# -- Compiling module top
+# 
+# Top level modules:
+# 	top
+# End time: 19:14:57 on Mar 18,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# vsim -voptargs=""+acc=rn"" -msgmode both -coverage -t 1ps -lib work top "+UVM_TESTNAME=timer_t_test" 
+# Start time: 19:14:57 on Mar 18,2025
+# ** Note: (vsim-3813) Design is being optimized due to module recompilation...
+# Loading sv_std.std
+# Loading work.itimer_itf(fast)
+# Loading work.dut_internal_if(fast)
+# Loading mtiUvm.uvm_pkg
+# Loading work.sv_param_pkg(fast)
+# Loading work.sv_timer_t_agent_pkg(fast)
+# Loading work.sv_timer_t_gm_pkg(fast)
+# Loading work.sv_timer_t_env_pkg(fast)
+# Loading work.sv_timer_t_test_pkg(fast)
+# Loading mtiUvm.questa_uvm_pkg(fast)
+# Loading work.top(fast)
+# Loading work.ifc_sv_unit(fast)
+# Loading work.itimer_itf(fast)
+# Loading std.standard
+# Loading verilog.vl_resolve(body)
+# Loading std.textio(body)
+# Loading ieee.std_logic_1164(body)
+# Loading ieee.numeric_std(body)
+# Loading verilog.vl_types(body)
+# Loading work.timer(rtl)#1
+# Loading work.dut_internal_if(fast)
+# Loading work.abv_timer_sv_unit(fast)
+# Loading work.abv_timer(fast)
+# Loading /opt/questasim_2019_4/questasim/uvm-1.1d/linux_x86_64/uvm_dpi.so
+# ----------------------------------------------------------------
+# UVM-1.1d
+# (C) 2007-2013 Mentor Graphics Corporation
+# (C) 2007-2013 Cadence Design Systems, Inc.
+# (C) 2006-2013 Synopsys, Inc.
+# (C) 2011-2013 Cypress Semiconductor Corp.
+# ----------------------------------------------------------------
+# 
+#   ***********       IMPORTANT RELEASE NOTES         ************
+# 
+#   You are using a version of the UVM library that has been compiled
+#   with `UVM_NO_DEPRECATED undefined.
+#   See http://www.eda.org/svdb/view.php?id=3313 for more details.
+# 
+#   You are using a version of the UVM library that has been compiled
+#   with `UVM_OBJECT_MUST_HAVE_CONSTRUCTOR undefined.
+#   See http://www.eda.org/svdb/view.php?id=3770 for more details.
+# 
+#       (Specify +UVM_NO_RELNOTES to turn off this notice)
+# 
+# UVM_INFO verilog_src/questa_uvm_pkg-1.2/src/questa_uvm_pkg.sv(277) @ 0: reporter [Questa UVM] QUESTA_UVM-1.2.3
+# UVM_INFO verilog_src/questa_uvm_pkg-1.2/src/questa_uvm_pkg.sv(278) @ 0: reporter [Questa UVM]  questa_uvm::init(+struct)
+# UVM_INFO @ 0 ns: reporter [RNTST] Running test timer_t_test...
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 20 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 10 ns   timer_t_transaction  -     @764       
+#   begin_time  time                 64    10 ns      
+#   RST         integral             1     'h0        
+#   REQUEST     integral             2     'h0        
+#   ADDRESS     integral             32    'h0        
+#   DATA_IN     integral             32    'h0        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h0        
+# ----------------------------------------------------
+# 
+# --------------------------------------------
+# Name        Type                 Size  Value
+# --------------------------------------------
+# dut: 10 ns  timer_t_transaction  -     @760 
+#   RST       integral             1     'h0  
+#   REQUEST   integral             2     'h0  
+#   ADDRESS   integral             32    'h0  
+#   DATA_IN   integral             32    'h0  
+#   RESPONSE  integral             3     'h0  
+#   DATA_OUT  integral             32    'h0  
+#   P_IRQ     integral             1     'h0  
+# --------------------------------------------
+# 
+# 
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 30 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 20 ns   timer_t_transaction  -     @777       
+#   begin_time  time                 64    20 ns      
+#   RST         integral             1     'h0        
+#   REQUEST     integral             2     'h0        
+#   ADDRESS     integral             32    'h0        
+#   DATA_IN     integral             32    'h0        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h0        
+# ----------------------------------------------------
+# 
+# --------------------------------------------
+# Name        Type                 Size  Value
+# --------------------------------------------
+# dut: 20 ns  timer_t_transaction  -     @768 
+#   RST       integral             1     'h0  
+#   REQUEST   integral             2     'h0  
+#   ADDRESS   integral             32    'h0  
+#   DATA_IN   integral             32    'h0  
+#   RESPONSE  integral             3     'h0  
+#   DATA_OUT  integral             32    'h0  
+#   P_IRQ     integral             1     'h0  
+# --------------------------------------------
+# 
+# 
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 40 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 30 ns   timer_t_transaction  -     @789       
+#   begin_time  time                 64    30 ns      
+#   RST         integral             1     'h1        
+#   REQUEST     integral             2     'h2        
+#   ADDRESS     integral             32    'h0        
+#   DATA_IN     integral             32    'h0        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h0        
+# ----------------------------------------------------
+# 
+# --------------------------------------------
+# Name        Type                 Size  Value
+# --------------------------------------------
+# dut: 30 ns  timer_t_transaction  -     @781 
+#   RST       integral             1     'h1  
+#   REQUEST   integral             2     'h2  
+#   ADDRESS   integral             32    'h0  
+#   DATA_IN   integral             32    'h0  
+#   RESPONSE  integral             3     'h0  
+#   DATA_OUT  integral             32    'h0  
+#   P_IRQ     integral             1     'h0  
+# --------------------------------------------
+# 
+# 
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 50 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 40 ns   timer_t_transaction  -     @801       
+#   begin_time  time                 64    40 ns      
+#   RST         integral             1     'h1        
+#   REQUEST     integral             2     'h2        
+#   ADDRESS     integral             32    'h4        
+#   DATA_IN     integral             32    'h4        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h0        
+# ----------------------------------------------------
+# 
+# --------------------------------------------
+# Name        Type                 Size  Value
+# --------------------------------------------
+# dut: 40 ns  timer_t_transaction  -     @793 
+#   RST       integral             1     'h1  
+#   REQUEST   integral             2     'h2  
+#   ADDRESS   integral             32    'h4  
+#   DATA_IN   integral             32    'h4  
+#   RESPONSE  integral             3     'h1  
+#   DATA_OUT  integral             32    'h0  
+#   P_IRQ     integral             1     'h0  
+# --------------------------------------------
+# 
+# 
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 60 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 50 ns   timer_t_transaction  -     @813       
+#   begin_time  time                 64    50 ns      
+#   RST         integral             1     'h1        
+#   REQUEST     integral             2     'h2        
+#   ADDRESS     integral             32    'h8        
+#   DATA_IN     integral             32    'h1        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h0        
+# ----------------------------------------------------
+# 
+# --------------------------------------------
+# Name        Type                 Size  Value
+# --------------------------------------------
+# dut: 50 ns  timer_t_transaction  -     @805 
+#   RST       integral             1     'h1  
+#   REQUEST   integral             2     'h2  
+#   ADDRESS   integral             32    'h8  
+#   DATA_IN   integral             32    'h1  
+#   RESPONSE  integral             3     'h1  
+#   DATA_OUT  integral             32    'h0  
+#   P_IRQ     integral             1     'h0  
+# --------------------------------------------
+# 
+# 
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 70 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 60 ns   timer_t_transaction  -     @825       
+#   begin_time  time                 64    60 ns      
+#   RST         integral             1     'h1        
+#   REQUEST     integral             2     'h0        
+#   ADDRESS     integral             32    'h0        
+#   DATA_IN     integral             32    'h0        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h0        
+# ----------------------------------------------------
+# 
+# --------------------------------------------
+# Name        Type                 Size  Value
+# --------------------------------------------
+# dut: 60 ns  timer_t_transaction  -     @817 
+#   RST       integral             1     'h1  
+#   REQUEST   integral             2     'h0  
+#   ADDRESS   integral             32    'h0  
+#   DATA_IN   integral             32    'h0  
+#   RESPONSE  integral             3     'h1  
+#   DATA_OUT  integral             32    'h0  
+#   P_IRQ     integral             1     'h0  
+# --------------------------------------------
+# 
+# 
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 80 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 70 ns   timer_t_transaction  -     @837       
+#   begin_time  time                 64    70 ns      
+#   RST         integral             1     'h1        
+#   REQUEST     integral             2     'h0        
+#   ADDRESS     integral             32    'h0        
+#   DATA_IN     integral             32    'h0        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h0        
+# ----------------------------------------------------
+# 
+# --------------------------------------------
+# Name        Type                 Size  Value
+# --------------------------------------------
+# dut: 70 ns  timer_t_transaction  -     @829 
+#   RST       integral             1     'h1  
+#   REQUEST   integral             2     'h0  
+#   ADDRESS   integral             32    'h0  
+#   DATA_IN   integral             32    'h0  
+#   RESPONSE  integral             3     'h0  
+#   DATA_OUT  integral             32    'h0  
+#   P_IRQ     integral             1     'h0  
+# --------------------------------------------
+# 
+# 
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 90 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 80 ns   timer_t_transaction  -     @849       
+#   begin_time  time                 64    80 ns      
+#   RST         integral             1     'h1        
+#   REQUEST     integral             2     'h0        
+#   ADDRESS     integral             32    'h0        
+#   DATA_IN     integral             32    'h0        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h0        
+# ----------------------------------------------------
+# 
+# --------------------------------------------
+# Name        Type                 Size  Value
+# --------------------------------------------
+# dut: 80 ns  timer_t_transaction  -     @841 
+#   RST       integral             1     'h1  
+#   REQUEST   integral             2     'h0  
+#   ADDRESS   integral             32    'h0  
+#   DATA_IN   integral             32    'h0  
+#   RESPONSE  integral             3     'h0  
+#   DATA_OUT  integral             32    'h0  
+#   P_IRQ     integral             1     'h0  
+# --------------------------------------------
+# 
+# 
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 100 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 90 ns   timer_t_transaction  -     @861       
+#   begin_time  time                 64    90 ns      
+#   RST         integral             1     'h1        
+#   REQUEST     integral             2     'h0        
+#   ADDRESS     integral             32    'h0        
+#   DATA_IN     integral             32    'h0        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h0        
+# ----------------------------------------------------
+# 
+# --------------------------------------------
+# Name        Type                 Size  Value
+# --------------------------------------------
+# dut: 90 ns  timer_t_transaction  -     @853 
+#   RST       integral             1     'h1  
+#   REQUEST   integral             2     'h0  
+#   ADDRESS   integral             32    'h0  
+#   DATA_IN   integral             32    'h0  
+#   RESPONSE  integral             3     'h0  
+#   DATA_OUT  integral             32    'h0  
+#   P_IRQ     integral             1     'h0  
+# --------------------------------------------
+# 
+# 
+# IRQ signal set at cycle 10
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 110 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 100 ns  timer_t_transaction  -     @873       
+#   begin_time  time                 64    100 ns     
+#   RST         integral             1     'h1        
+#   REQUEST     integral             2     'h0        
+#   ADDRESS     integral             32    'h0        
+#   DATA_IN     integral             32    'h0        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h0        
+# ----------------------------------------------------
+# 
+# ---------------------------------------------
+# Name         Type                 Size  Value
+# ---------------------------------------------
+# dut: 100 ns  timer_t_transaction  -     @865 
+#   RST        integral             1     'h1  
+#   REQUEST    integral             2     'h0  
+#   ADDRESS    integral             32    'h0  
+#   DATA_IN    integral             32    'h0  
+#   RESPONSE   integral             3     'h0  
+#   DATA_OUT   integral             32    'h0  
+#   P_IRQ      integral             1     'h0  
+# ---------------------------------------------
+# 
+# 
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 120 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 110 ns  timer_t_transaction  -     @885       
+#   begin_time  time                 64    110 ns     
+#   RST         integral             1     'h1        
+#   REQUEST     integral             2     'h0        
+#   ADDRESS     integral             32    'h0        
+#   DATA_IN     integral             32    'h0        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h1        
+# ----------------------------------------------------
+# 
+# ---------------------------------------------
+# Name         Type                 Size  Value
+# ---------------------------------------------
+# dut: 110 ns  timer_t_transaction  -     @877 
+#   RST        integral             1     'h1  
+#   REQUEST    integral             2     'h0  
+#   ADDRESS    integral             32    'h0  
+#   DATA_IN    integral             32    'h0  
+#   RESPONSE   integral             3     'h0  
+#   DATA_OUT   integral             32    'h0  
+#   P_IRQ      integral             1     'h1  
+# ---------------------------------------------
+# 
+# 
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 130 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 120 ns  timer_t_transaction  -     @897       
+#   begin_time  time                 64    120 ns     
+#   RST         integral             1     'h1        
+#   REQUEST     integral             2     'h0        
+#   ADDRESS     integral             32    'h0        
+#   DATA_IN     integral             32    'h0        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h0        
+# ----------------------------------------------------
+# 
+# ---------------------------------------------
+# Name         Type                 Size  Value
+# ---------------------------------------------
+# dut: 120 ns  timer_t_transaction  -     @889 
+#   RST        integral             1     'h1  
+#   REQUEST    integral             2     'h0  
+#   ADDRESS    integral             32    'h0  
+#   DATA_IN    integral             32    'h0  
+#   RESPONSE   integral             3     'h0  
+#   DATA_OUT   integral             32    'h0  
+#   P_IRQ      integral             1     'h0  
+# ---------------------------------------------
+# 
+# 
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 140 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 130 ns  timer_t_transaction  -     @909       
+#   begin_time  time                 64    130 ns     
+#   RST         integral             1     'h1        
+#   REQUEST     integral             2     'h0        
+#   ADDRESS     integral             32    'h0        
+#   DATA_IN     integral             32    'h0        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h0        
+# ----------------------------------------------------
+# 
+# ---------------------------------------------
+# Name         Type                 Size  Value
+# ---------------------------------------------
+# dut: 130 ns  timer_t_transaction  -     @901 
+#   RST        integral             1     'h1  
+#   REQUEST    integral             2     'h0  
+#   ADDRESS    integral             32    'h0  
+#   DATA_IN    integral             32    'h0  
+#   RESPONSE   integral             3     'h0  
+#   DATA_OUT   integral             32    'h0  
+#   P_IRQ      integral             1     'h0  
+# ---------------------------------------------
+# 
+# 
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 150 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 140 ns  timer_t_transaction  -     @921       
+#   begin_time  time                 64    140 ns     
+#   RST         integral             1     'h1        
+#   REQUEST     integral             2     'h0        
+#   ADDRESS     integral             32    'h0        
+#   DATA_IN     integral             32    'h0        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h0        
+# ----------------------------------------------------
+# 
+# ---------------------------------------------
+# Name         Type                 Size  Value
+# ---------------------------------------------
+# dut: 140 ns  timer_t_transaction  -     @913 
+#   RST        integral             1     'h1  
+#   REQUEST    integral             2     'h0  
+#   ADDRESS    integral             32    'h0  
+#   DATA_IN    integral             32    'h0  
+#   RESPONSE   integral             3     'h0  
+#   DATA_OUT   integral             32    'h0  
+#   P_IRQ      integral             1     'h0  
+# ---------------------------------------------
+# 
+# 
+# IRQ signal set at cycle 15
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 160 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 150 ns  timer_t_transaction  -     @933       
+#   begin_time  time                 64    150 ns     
+#   RST         integral             1     'h1        
+#   REQUEST     integral             2     'h0        
+#   ADDRESS     integral             32    'h0        
+#   DATA_IN     integral             32    'h0        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h0        
+# ----------------------------------------------------
+# 
+# ---------------------------------------------
+# Name         Type                 Size  Value
+# ---------------------------------------------
+# dut: 150 ns  timer_t_transaction  -     @925 
+#   RST        integral             1     'h1  
+#   REQUEST    integral             2     'h0  
+#   ADDRESS    integral             32    'h0  
+#   DATA_IN    integral             32    'h0  
+#   RESPONSE   integral             3     'h0  
+#   DATA_OUT   integral             32    'h0  
+#   P_IRQ      integral             1     'h0  
+# ---------------------------------------------
+# 
+# 
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 170 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 160 ns  timer_t_transaction  -     @945       
+#   begin_time  time                 64    160 ns     
+#   RST         integral             1     'h1        
+#   REQUEST     integral             2     'h0        
+#   ADDRESS     integral             32    'h0        
+#   DATA_IN     integral             32    'h0        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h1        
+# ----------------------------------------------------
+# 
+# ---------------------------------------------
+# Name         Type                 Size  Value
+# ---------------------------------------------
+# dut: 160 ns  timer_t_transaction  -     @937 
+#   RST        integral             1     'h1  
+#   REQUEST    integral             2     'h0  
+#   ADDRESS    integral             32    'h0  
+#   DATA_IN    integral             32    'h0  
+#   RESPONSE   integral             3     'h0  
+#   DATA_OUT   integral             32    'h0  
+#   P_IRQ      integral             1     'h1  
+# ---------------------------------------------
+# 
+# 
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 180 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ----------------------------------------------------
+# Name          Type                 Size  Value      
+# ----------------------------------------------------
+# gold: 170 ns  timer_t_transaction  -     @957       
+#   begin_time  time                 64    170 ns     
+#   RST         integral             1     'h1        
+#   REQUEST     integral             2     'h0        
+#   ADDRESS     integral             32    'h0        
+#   DATA_IN     integral             32    'h0        
+#   RESPONSE    integral             3     'h0X       
+#   DATA_OUT    integral             32    'h0xxxxxxxx
+#   P_IRQ       integral             1     'h0        
+# ----------------------------------------------------
+# 
+# ---------------------------------------------
+# Name         Type                 Size  Value
+# ---------------------------------------------
+# dut: 170 ns  timer_t_transaction  -     @949 
+#   RST        integral             1     'h1  
+#   REQUEST    integral             2     'h0  
+#   ADDRESS    integral             32    'h0  
+#   DATA_IN    integral             32    'h0  
+#   RESPONSE   integral             3     'h0  
+#   DATA_OUT   integral             32    'h0  
+#   P_IRQ      integral             1     'h0  
+# ---------------------------------------------
+# 
+# 
+# UVM_INFO verilog_src/uvm-1.1d/src/base/uvm_objection.svh(1267) @ 180 ns: reporter [TEST_DONE] 'run' phase is ready to proceed to the 'extract' phase
+# UVM_INFO env_lib/./scoreboard.svh(91) @ 180 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [FINAL STATUS] The result for timer VERIFICATION is FAIL, 17/17 , mismatches!
+# 
+# --- UVM Report Summary ---
+# 
+# ** Report counts by severity
+# UVM_INFO :    5
+# UVM_WARNING :    0
+# UVM_ERROR :   17
+# UVM_FATAL :    0
+# ** Report counts by id
+# [Comparison in SCOREBOARD:]    17
+# [FINAL STATUS]     1
+# [Questa UVM]     2
+# [RNTST]     1
+# [TEST_DONE]     1
+# ** Note: $finish    : /opt/questasim_2019_4/questasim/linux_x86_64/../verilog_src/uvm-1.1d/src/base/uvm_root.svh(430)
+#    Time: 180 ns  Iteration: 64  Instance: /top
+# Break in Task uvm_pkg/uvm_root::run_test at /opt/questasim_2019_4/questasim/linux_x86_64/../verilog_src/uvm-1.1d/src/base/uvm_root.svh line 430
+# MACRO ./start.tcl PAUSED at line 148
+# End time: 20:28:55 on Mar 18,2025, Elapsed time: 1:13:58
+# Errors: 1, Warnings: 0

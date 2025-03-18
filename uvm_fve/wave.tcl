@@ -30,6 +30,11 @@ proc itimer_itf { PATH } {
     add wave -noupdate -hex -color orange -label P_IRQ sv_timer_t_gm_pkg::timer_t_gm::P_IRQ
     add wave -noupdate -hex -color orange -label RESPONSE sv_timer_t_gm_pkg::timer_t_gm::RESPONSE
     add wave -noupdate -hex -color orange -label DATA_OUT sv_timer_t_gm_pkg::timer_t_gm::DATA_OUT
+    add wave -noupdate -hex -color orange -label ctrl_reg sv_timer_t_gm_pkg::timer_t_gm::ctrl_reg
+    add wave -noupdate -hex -color orange -label timer_cnt sv_timer_t_gm_pkg::timer_t_gm::timer_cnt
+    add wave -noupdate -hex -color orange -label timer_cmp sv_timer_t_gm_pkg::timer_t_gm::timer_cmp
+    add wave -noupdate -hex -color orange -label cycle_cnt sv_timer_t_gm_pkg::timer_t_gm::cycle_cnt
+    add wave -noupdate -hex -color orange -label reset_signal sv_timer_t_gm_pkg::timer_t_gm::reset_signal
 }
 
 proc customize_gui { TOP_MODULE HDL_DUT } {

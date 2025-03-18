@@ -49,4 +49,13 @@ package sv_param_pkg;
         TIMER_CYCLE_H = 8'h14
     } reg_address_codes_e;
 
+
+    typedef enum bit [1:0]
+    {
+        TIMER_CR_DISABLED = 2'b00,
+        TIMER_CR_AUTO_RESTART = 2'b01,
+        TIMER_CR_ONESHOT = 2'b10,
+        TIMER_CR_CONTINUOUS = 2'b11
+    } timer_cr_mode_e;
+
 endpackage: sv_param_pkg
