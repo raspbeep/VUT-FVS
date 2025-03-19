@@ -8,4 +8,5 @@ package sv_timer_t_test_pkg;
     `include "uvm_macros.svh"
     `include "test_base.svh"
     `include "test.svh"
+    `include "new_test.svh"
 endpackage: sv_timer_t_test_pkg

@@ -49,7 +49,6 @@ package sv_param_pkg;
         TIMER_CYCLE_H = 8'h14
     } reg_address_codes_e;
 
-
     typedef enum bit [1:0]
     {
         TIMER_CR_DISABLED = 2'b00,

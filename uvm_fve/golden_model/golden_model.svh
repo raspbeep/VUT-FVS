@@ -100,16 +100,15 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
             RESPONSE = CP_RSP_IDLE;
             DATA_OUT = 0;
             // ask
-            // cycle_cnt_reset_next_clock = 1;
+            cycle_cnt_reset_next_clock = 1;
             return;
         end else begin
             reset_signal = 0;
             t.P_IRQ = 0;
-            // ask
-            // if (cycle_cnt_reset_next_clock) begin
-            //     cycle_cnt = 0;
-            //     cycle_cnt_reset_next_clock = 0;
-            // end
+            if (cycle_cnt_reset_next_clock) begin
+                cycle_cnt = 0;
+                cycle_cnt_reset_next_clock = 0;
+            end
         end
 
         if (timer_cmp_next_clock == 1) begin
