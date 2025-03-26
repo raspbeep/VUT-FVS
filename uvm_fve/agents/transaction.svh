@@ -116,25 +116,23 @@ class extended_timer_t_transaction extends timer_t_transaction;
         super.new(name);
     endfunction : new
 
-    // New constraints
+    
     constraint valid_burst_length {
-        burst_length inside {[1:16]}; // Example: Burst length between 1 and 16
+        burst_length inside {[1:16]}
     }
 
     constraint address_alignment {
-        ADDRESS[0] == 0; // Example: Ensure ADDRESS is always even
+        ADDRESS[0] == 0;
     }
 
     constraint enable_implication {
-        enable -> REQUEST != 0; // Example: If enable is set, REQUEST must not be 0
+        enable -> REQUEST != 0;
     }
 
-    // Override existing constraints (optional)
     constraint valid_request {
-        REQUEST inside {[1:3]}; // Example: REQUEST cannot be 0 in extended mode
+        REQUEST inside {[1:3]};
     }
 
-    // Override the do_copy function to include the new variables
     function void do_copy(uvm_object rhs);
         extended_timer_t_transaction rhs_;
         if (!$cast(rhs_, rhs)) begin
@@ -146,16 +144,20 @@ class extended_timer_t_transaction extends timer_t_transaction;
         burst_length = rhs_.burst_length;
     endfunction : do_copy
 
-    // Override the convert2string function to include the new variables
     function string convert2string();
         string s;
-        s = $sformatf(
-            "%s\n\tenable: %b\n\tburst_length: %0d", super.convert2string(), enable,
-            burst_length);
+        s = $sformatf( "%s\n\tRST: 'h%0h\n\tP_IRQ: 'h%0h\n\tADDRESS: 'h%0h\n\tREQUEST: 'h%0h\n\tRESPONSE: 'h%0h\n\tDATA_OUT: 'h%0h\n\tDATA_IN: 'h%0h",
+            super.convert2string(),
+            RST,
+            P_IRQ,
+            ADDRESS,
+            REQUEST,
+            RESPONSE,
+            DATA_OUT,
+            DATA_IN );
         return s;
-    endfunction : convert2string
+    endfunction: convert2string
 
-    // Override the do_print function to include the new variables
     function void do_print(uvm_printer printer);
         super.do_print(printer);
         if ( printer != null ) begin
@@ -180,5 +182,5 @@ class extended_timer_t_transaction extends timer_t_transaction;
         `uvm_record_field( "DATA_OUT", DATA_OUT )
         `uvm_record_field( "DATA_IN", DATA_IN )
     endfunction: do_record
-    
+
 endclass : extended_timer_t_transaction
