@@ -118,7 +118,7 @@ class extended_timer_t_transaction extends timer_t_transaction;
 
     
     constraint valid_burst_length {
-        burst_length inside {[1:16]}
+        burst_length inside {[1:16]};
     }
 
     constraint address_alignment {

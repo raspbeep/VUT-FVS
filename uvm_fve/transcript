@@ -1,17 +1,15 @@
-# End time: 17:48:18 on Mar 19,2025, Elapsed time: 0:11:16
-# Errors: 2, Warnings: 0
 # QuestaSim-64 vcom 2019.4 Compiler 2019.10 Oct 15 2019
-# Start time: 17:48:18 on Mar 19,2025
+# Start time: 10:20:43 on Mar 26,2025
 # vcom -reportprogress 300 -explicit -2008 -source "+cover=sbcef" -nowarn 13 -work work ../rtl/./timer_fvs.vhd -just pe 
 # -- Loading package STANDARD
 # -- Loading package TEXTIO
 # -- Loading package std_logic_1164
 # -- Loading package NUMERIC_STD
 # -- Compiling entity timer
-# End time: 17:48:18 on Mar 19,2025, Elapsed time: 0:00:00
+# End time: 10:20:43 on Mar 26,2025, Elapsed time: 0:00:00
 # Errors: 0, Warnings: 0
 # QuestaSim-64 vcom 2019.4 Compiler 2019.10 Oct 15 2019
-# Start time: 17:48:18 on Mar 19,2025
+# Start time: 10:20:43 on Mar 26,2025
 # vcom -reportprogress 300 -explicit -2008 -source "+cover=sbcef" -nowarn 13 -work work ../rtl/./timer_fvs.vhd -skip pec 
 # -- Loading package STANDARD
 # -- Compiling architecture RTL of timer
@@ -19,38 +17,46 @@
 # -- Loading package std_logic_1164
 # -- Loading package NUMERIC_STD
 # -- Loading entity timer
-# End time: 17:48:18 on Mar 19,2025, Elapsed time: 0:00:00
+# End time: 10:20:43 on Mar 26,2025, Elapsed time: 0:00:00
 # Errors: 0, Warnings: 0
 # QuestaSim-64 vcom 2019.4 Compiler 2019.10 Oct 15 2019
-# Start time: 17:48:18 on Mar 19,2025
+# Start time: 10:20:43 on Mar 26,2025
 # vcom -reportprogress 300 -explicit -2008 -source "+cover=sbcef" -nowarn 13 -work work ../rtl/./timer_fvs.vhd -just c 
-# End time: 17:48:18 on Mar 19,2025, Elapsed time: 0:00:00
+# End time: 10:20:43 on Mar 26,2025, Elapsed time: 0:00:00
 # Errors: 0, Warnings: 0
 # QuestaSim-64 vlog 2019.4 Compiler 2019.10 Oct 15 2019
-# Start time: 17:48:18 on Mar 19,2025
+# Start time: 10:20:43 on Mar 26,2025
 # vlog -reportprogress 300 -sv -incr -source -timescale 1ps/1ps -work work test_parameters.sv agents/./sv_agent_pkg.sv golden_model/sv_golden_model_pkg.sv env_lib/./sv_env_pkg.sv test_lib/./sv_test_pkg.sv agents/./ifc.sv abv/./abv_timer.sv top_level.sv 
 # ** Note: (vlog-2286) test_parameters.sv(4): Using implicit +incdir+/opt/questasim_2019_4/questasim/uvm-1.1d/../verilog_src/uvm-1.1d/src from import uvm_pkg
 # -- Skipping package sv_param_pkg
-# -- Compiling package sv_timer_t_agent_pkg
-# -- Compiling package sv_timer_t_gm_pkg
-# -- Compiling package sv_timer_t_env_pkg
-# -- Compiling package sv_timer_t_test_pkg
+# -- Skipping package sv_timer_t_agent_pkg
+# -- Skipping package sv_timer_t_gm_pkg
+# -- Skipping package sv_timer_t_env_pkg
+# -- Skipping package sv_timer_t_test_pkg
 # -- Skipping interface itimer_itf
 # -- Skipping interface dut_internal_if
-# -- Compiling package ifc_sv_unit
-# -- Compiling interface itimer_itf
-# -- Compiling interface dut_internal_if
+# -- Skipping package ifc_sv_unit
 # -- Skipping module abv_timer
 # -- Skipping package abv_timer_sv_unit
-# -- Compiling module top
+# -- Skipping module top
 # 
 # Top level modules:
 # 	top
-# End time: 17:48:19 on Mar 19,2025, Elapsed time: 0:00:01
+# End time: 10:20:44 on Mar 26,2025, Elapsed time: 0:00:01
 # Errors: 0, Warnings: 0
 # vsim -voptargs=""+acc=rn"" -msgmode both -coverage -t 1ps -lib work top "+UVM_TESTNAME=new_timer_t_test" 
-# Start time: 17:48:19 on Mar 19,2025
-# ** Note: (vsim-3813) Design is being optimized due to module recompilation...
+# Start time: 10:20:44 on Mar 26,2025
+# ** Error: Unable to lock WLF file "vsim.wlf". Retrying 1 times, errno 11
+# ** Error: Unable to lock WLF file "vsim.wlf". Retrying 2 times, errno 11
+# ** Error: Unable to lock WLF file "vsim.wlf". Retrying 3 times, errno 11
+# ** Error: Cannot lock WLF file: "vsim.wlf"
+#           errno 11: Resource temporarily unavailable.
+# ** Warning: (vsim-WLF-5000) WLF file currently in use: vsim.wlf
+#           File in use by: vengineer  Hostname: vbox  ProcessID: 4680
+#           Attempting to use alternate WLF file "./wlftzfikdY".
+# ** Warning: (vsim-WLF-5001) Could not open WLF file: vsim.wlf
+#           Using alternate file: ./wlftzfikdY
+# ** Note: (vsim-8009) Loading existing optimized design _opt3
 # Loading sv_std.std
 # Loading work.itimer_itf(fast)
 # Loading work.dut_internal_if(fast)
@@ -1135,3 +1141,13 @@
 #    Time: 360 ns  Iteration: 63  Instance: /top
 # Break in Task uvm_pkg/uvm_root::run_test at /opt/questasim_2019_4/questasim/linux_x86_64/../verilog_src/uvm-1.1d/src/base/uvm_root.svh line 430
 # MACRO ./start.tcl PAUSED at line 148
+coverage report -html -output covhtmlreport -assert -directive -cvg -code bcefst -threshL 50 -threshH 90
+# ** Error: (vsim-19071) Directory 'covhtmlreport' already exists.
+# Error while executing: coverage report
+# Usage: coverage report
+# End time: 11:31:09 on Mar 26,2025, Elapsed time: 1:10:25
+# Errors: 5, Warnings: 2
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+
+# End time: 11:31:20 on Mar 26,2025, Elapsed time: 1:15:56
+# Errors: 0, Warnings: 0
