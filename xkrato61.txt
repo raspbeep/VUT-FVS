@@ -1,0 +1,22 @@
+covergroup alu_cover_group @(posedge CLK);
+    // 1. Samostatný coverpoint pro všechny povolené hodnoty MOVI (00,01,10), 11 hodnota je označena za ilegální.
+    c : coverpoint MOVI {
+        bins legal[] = {0, 1, 2};
+        illegal_bin illegal_combination = { 3 };
+    }
+
+    // 1. Transition coverpoint pro kombinace operací ADD->MULT a MULT->DIV na signálu OP.
+    b : coverpoint OP {
+        bins transitions[] = { (ADD =>MULT), (MULT=>DIV) };
+    }
+
+    // 3. Cross coverpoint pro výše zmíněný transition coverpoint a ALU_RDY == 1.
+    c : cross b, ALU_RDY  {
+        bins alu_rdy_high = cross_binsof(b.transitions) && (ALU_RDY == 1);
+    }
+
+    // 4. Datový coverpoint pro REG_A (8b) (maximální a minimální hodnota).
+    d : coverpoint REG_A {
+        bins min_max[] = { 0, 255 };
+    }
+endgroup;
