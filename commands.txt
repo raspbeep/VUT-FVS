@@ -1,6 +1,6 @@
 
 spustenie testov z listu testov
-./start_verification.sh -c -uvm_tests_file test_lib/test_list -run_multiple_tests
+            ./start_verification.sh -c -uvm_tests_file test_lib/test_list -run_multiple_tests    
 
 coverage generation
 coverage report -html -output covhtmlreport -annotate -details -assert -directive -cvg -code bcefst -threshL 50 -threshH 90
