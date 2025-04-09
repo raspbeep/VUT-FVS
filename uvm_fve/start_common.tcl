@@ -92,7 +92,7 @@ quietly set CODE_COVERAGE_ENABLED 1
 # prepare command to start simulation
 #quietly set VSIM_RUN_CMD "vsim -voptargs=\"+acc=rn\" -msgmode both -assertcover -coverage -t 1ps -lib ${WORKING_LIBRARY} ${TOP_MODULE}"
 #quietly set VSIM_RUN_CMD "vsim -voptargs=\"+acc=rn\" -msgmode both -coverage -t 1ps -lib ${WORKING_LIBRARY} ${TOP_MODULE}"
-quietly set VSIM_RUN_CMD "vsim -voptargs=\"+acc=rn\" -msgmode both -coverage -t 1ps -lib ${WORKING_LIBRARY} ${TOP_MODULE}"
+quietly set VSIM_RUN_CMD "vsim -voptargs=\"+acc=rn\" -msgmode both -assertdebug -t 1ps -lib ${WORKING_LIBRARY} ${TOP_MODULE}"
 quietly set VSIM_COV_MERGE_FILE "./${UCDB_DIR}/final.ucdb"
 quietly set VSIM_COVERAGE_MERGE "vcover merge -64 ${VSIM_COV_MERGE_FILE} ./${UCDB_DIR}/*.ucdb"
 

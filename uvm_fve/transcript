@@ -1,6 +1,49 @@
-# coverage read -dataset final ucdb/final.ucdb
-# ucdb/final.ucdb opened as coverage dataset "final"
-# coverage report -html -output covhtmlreport -annotate -details -assert -directive -cvg -code bcefst -threshL 50 -threshH 90
-# 
-# 
-#  quit -f
+# QuestaSim-64 vcom 2019.4 Compiler 2019.10 Oct 15 2019
+# Start time: 10:34:09 on Apr 09,2025
+# vcom -reportprogress 300 -explicit -2008 -source "+cover=sbcef" -nowarn 13 -work work ../rtl/./timer_fvs.vhd -just pe 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Compiling entity timer
+# End time: 10:34:09 on Apr 09,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 2019.4 Compiler 2019.10 Oct 15 2019
+# Start time: 10:34:10 on Apr 09,2025
+# vcom -reportprogress 300 -explicit -2008 -source "+cover=sbcef" -nowarn 13 -work work ../rtl/./timer_fvs.vhd -skip pec 
+# -- Loading package STANDARD
+# -- Compiling architecture RTL of timer
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Loading entity timer
+# End time: 10:34:10 on Apr 09,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 2019.4 Compiler 2019.10 Oct 15 2019
+# Start time: 10:34:10 on Apr 09,2025
+# vcom -reportprogress 300 -explicit -2008 -source "+cover=sbcef" -nowarn 13 -work work ../rtl/./timer_fvs.vhd -just c 
+# End time: 10:34:10 on Apr 09,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vlog 2019.4 Compiler 2019.10 Oct 15 2019
+# Start time: 10:34:10 on Apr 09,2025
+# vlog -reportprogress 300 -sv -incr -source -timescale 1ps/1ps -work work test_parameters.sv agents/./sv_agent_pkg.sv golden_model/sv_golden_model_pkg.sv env_lib/./sv_env_pkg.sv test_lib/./sv_test_pkg.sv agents/./ifc.sv abv/./abv_timer.sv top_level.sv 
+# ** Note: (vlog-2286) test_parameters.sv(4): Using implicit +incdir+/opt/questasim_2019_4/questasim/uvm-1.1d/../verilog_src/uvm-1.1d/src from import uvm_pkg
+# -- Skipping package sv_param_pkg
+# -- Skipping package sv_timer_t_agent_pkg
+# -- Skipping package sv_timer_t_gm_pkg
+# -- Skipping package sv_timer_t_env_pkg
+# -- Skipping package sv_timer_t_test_pkg
+# -- Skipping interface itimer_itf
+# -- Skipping interface dut_internal_if
+# -- Skipping package ifc_sv_unit
+###### abv/./abv_timer.sv(44): property pr4:
+# ** Error: (vlog-13069) abv/./abv_timer.sv(44): near ":": syntax error, unexpected ':', expecting ';'.
+# ** Error: abv/./abv_timer.sv(6): (vlog-13294) Identifier must be declared with a port mode: CLK.
+###### top_level.sv(85): endmodule: top
+# ** Error (suppressible): top_level.sv(85): (vlog-13163) End label 'top' does not match module name on line 5.
+# End time: 10:34:11 on Apr 09,2025, Elapsed time: 0:00:01
+# Errors: 3, Warnings: 0
+# ** Error: /opt/questasim_2019_4/questasim/linux_x86_64/vlog failed.
+# Executing ONERROR command at macro ./start.tcl line 102
+# Compilation error has been encountered.
+# MACRO ./start.tcl PAUSED at line 102
