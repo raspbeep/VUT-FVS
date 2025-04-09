@@ -50,9 +50,13 @@ module top;
         .DATA_IN(timer_t_if.DATA_IN)
     );
 
+    // dotiahnutie interneho signalu z DUT do UVM TB
+    // coverage.svh:9
     bind top.HDL_DUT_U dut_internal_if ctrl(
         .ctrl_reg_d(ctrl_reg_d)
     );
+
+    // signal z dizajnu(signal na assertion module)
     // assertions checker instance
     bind HDL_DUT_U abv_timer abv_timer_module(
         .CLK(CLK),

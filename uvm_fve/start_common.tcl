@@ -18,13 +18,38 @@ proc save_coverage { COVERAGE_FILE } {
     global CODE_COVERAGE_ENABLED
     global FUNC_COVERAGE_ENABLED
 
-    if { ${CODE_COVERAGE_ENABLED} || ${FUNC_COVERAGE_ENABLED} } {
-        set CODE_PARAMS [expr ($CODE_COVERAGE_ENABLED)?"-codeAll -assert":""]
-        set FUNC_PARAMS [expr ($FUNC_COVERAGE_ENABLED)?"-cvg":""]
-        eval "coverage save $CODE_PARAMS $FUNC_PARAMS $COVERAGE_FILE"
+    # Check if *any* coverage type was intended to be enabled.
+    # The actual types saved depend on compile/simulation flags,
+    # not options to the 'coverage save' command itself in Questa.
+    if { [info exists CODE_COVERAGE_ENABLED] && ${CODE_COVERAGE_ENABLED} || \
+         [info exists FUNC_COVERAGE_ENABLED] && ${FUNC_COVERAGE_ENABLED} } {
+
+        # Recommend using the standard .ucdb extension
+        if { ![string match "*.ucdb" $COVERAGE_FILE] } {
+            puts "Warning: Coverage file '$COVERAGE_FILE' does not end with .ucdb. Recommend using the .ucdb extension for Questa."
+            # Optionally force the extension:
+            # set COVERAGE_FILE "${COVERAGE_FILE}.ucdb"
+        }
+
+        # Construct the Questa command (simple)
+        set cmd [list coverage save $COVERAGE_FILE]
+        puts "Executing coverage save command: $cmd"
+
+        # Execute and catch errors
+        # Use 'uplevel #0' if running this proc from another proc context
+        # Use plain execution if running directly in vsim Tcl console/do script
+        if { [catch { uplevel #0 $cmd } result] } {
+            puts stderr "Error saving coverage to ${COVERAGE_FILE}: $result"
+            # Return an error code or re-throw
+            return -code error "Coverage save failed"
+        } else {
+            puts "Coverage data saved successfully to ${COVERAGE_FILE}"
+            puts "Ensure simulation was run with 'vsim -coverage' and code compiled with '+cover=...' for data to be present."
+        }
+    } else {
+        puts "Coverage saving skipped (CODE_COVERAGE_ENABLED and FUNC_COVERAGE_ENABLED are both false or not defined)."
     }
 }
-
 # suppress warnings from arithmetic library during reset
 proc suppress_warnings {} {
     quietly set NumericStdNoWarnings 1;
@@ -92,7 +117,7 @@ quietly set CODE_COVERAGE_ENABLED 1
 # prepare command to start simulation
 #quietly set VSIM_RUN_CMD "vsim -voptargs=\"+acc=rn\" -msgmode both -assertcover -coverage -t 1ps -lib ${WORKING_LIBRARY} ${TOP_MODULE}"
 #quietly set VSIM_RUN_CMD "vsim -voptargs=\"+acc=rn\" -msgmode both -coverage -t 1ps -lib ${WORKING_LIBRARY} ${TOP_MODULE}"
-quietly set VSIM_RUN_CMD "vsim -voptargs=\"+acc=rn\" -msgmode both -assertdebug -t 1ps -lib ${WORKING_LIBRARY} ${TOP_MODULE}"
+quietly set VSIM_RUN_CMD "vsim -voptargs=\"+acc=arn\" -msgmode both -assertdebug -t 1ps -lib ${WORKING_LIBRARY} ${TOP_MODULE}"
 quietly set VSIM_COV_MERGE_FILE "./${UCDB_DIR}/final.ucdb"
 quietly set VSIM_COVERAGE_MERGE "vcover merge -64 ${VSIM_COV_MERGE_FILE} ./${UCDB_DIR}/*.ucdb"
 
