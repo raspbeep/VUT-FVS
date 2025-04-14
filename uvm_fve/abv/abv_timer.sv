@@ -52,22 +52,22 @@ property prUnknown;
 endproperty
 
 property prUnknownDataRead;
-    @(posedge CLK) (ctrl_reg_d === CP_REQ_READ)
+    @(posedge CLK) (REQUEST === CP_REQ_READ)
         |=> (!$isunknown((DATA_IN))) && (!$isunknown((DATA_OUT)));
 endproperty
 
 property prUnknownDataWrite;
-    @(posedge CLK) (ctrl_reg_d === CP_REQ_WRITE)
+    @(posedge CLK) (REQUEST === CP_REQ_WRITE)
         |-> (!$isunknown((DATA_IN))) && (!$isunknown((DATA_OUT)));
 endproperty
 
 property prReadWriteOOR;
-     @(posedge CLK) (ctrl_reg_d === CP_REQ_READ || ctrl_reg_d === CP_REQ_WRITE) && (ADDRESS > 8'h14)
+     @(posedge CLK) (REQUEST === CP_REQ_READ || REQUEST === CP_REQ_WRITE) && (ADDRESS > 8'h14)
         |-> ##1 (RESPONSE === CP_RSP_OOR);
 endproperty
 
 property prReadWriteUnaligned;
-     @(posedge CLK) (ctrl_reg_d === CP_REQ_READ || ctrl_reg_d === CP_REQ_WRITE) && (ADDRESS[1:0] != 2'b00)
+     @(posedge CLK) (REQUEST === CP_REQ_READ || REQUEST === CP_REQ_WRITE) && (ADDRESS[1:0] != 2'b00)
         |-> ##1 (RESPONSE === CP_RSP_UNALIGNED);
 endproperty
 
@@ -76,11 +76,11 @@ property checkWriteReadSameAddr;
     logic [DATA_WIDTH-1:0] v_data;
 
     @(posedge CLK)
-    ( (ctrl_reg_d === CP_REQ_WRITE),
+    ( (REQUEST === CP_REQ_WRITE),
       v_addr = ADDRESS,
       v_data = DATA_IN )
     ##1
-    ( ctrl_reg_d === CP_REQ_READ && ADDRESS === v_addr )
+    ( REQUEST === CP_REQ_READ && ADDRESS === v_addr )
     |->
     ##1
     ( DATA_OUT === v_data );
@@ -88,7 +88,7 @@ endproperty
 
 property ackAfterCorrectAddr;
     @(posedge CLK)
-    ( (ctrl_reg_d === CP_REQ_READ || ctrl_reg_d === CP_REQ_WRITE) && ADDRESS <= 8'h14 && ADDRESS[1:0] === 2'b00)
+    ( (REQUEST === CP_REQ_READ || REQUEST === CP_REQ_WRITE) && ADDRESS <= 8'h14 && ADDRESS[1:0] === 2'b00)
     |-> ##1
     ( RESPONSE === CP_RSP_ACK );
 endproperty
@@ -139,7 +139,7 @@ property cycleHRead;
 endproperty
 
 property cycleCntZeroDuringReset;
-    @(posedge CLK) (RST === 1)
+    @(posedge CLK) (RST === RST_ACT_LEVEL)
         |-> ##1 (cycle_cnt === 0);
 endproperty
 

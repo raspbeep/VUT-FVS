@@ -13,15 +13,17 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
     static logic [DATA_WIDTH-1:0] DATA_OUT;
 
     static logic data_out_next_clock = 0;
+    static logic [DATA_WIDTH-1:0] data_out_prev = 0;
     // indicates reading from cycle count, the value is immediate
     // otherwise the value of cmp_reg, cnt_reg, ctrl_reg is from the previous clock
     static logic reading_cycle_cnt = 0;
     static logic [DATA_WIDTH-1:0] data_out_next_clock_value;
 
+    static logic start_counting_next_clock = 0;
     // local variables for predict
     static logic cycle_cnt_reset_next_clock = 0;
     static logic [(DATA_WIDTH*2)-1:0] cycle_cnt = 0;
-    static logic irq_signal;
+    static logic irq_signal = 0;
 
     static logic ctrl_reg_next_clock = 0;
     static logic [1:0] ctrl_reg_next_clock_value;
@@ -34,6 +36,9 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
     static logic [DATA_WIDTH-1:0] data_out;
     static logic [DATA_WIDTH-1:0] data_in;
 
+    static logic disable_timer_next_clock = 0;
+    static logic reset_cnt_next_clock = 0;
+
     static logic timer_cnt_next_clock = 0;
     static logic [DATA_WIDTH-1:0] timer_cnt_next_clock_value;
     static logic [DATA_WIDTH-1:0] timer_cnt;
@@ -42,9 +47,9 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
     static logic [DATA_WIDTH-1:0] timer_cmp_next_clock_value;    
     static logic [DATA_WIDTH-1:0] timer_cmp;
 
-    static logic timer_cr_next_clock = 0;
-    static logic [DATA_WIDTH-1:0] timer_cr_next_clock_value;
-    static logic [DATA_WIDTH-1:0] timer_cr;
+    // static logic timer_cr_next_clock = 0;
+    // static logic [DATA_WIDTH-1:0] timer_cr_next_clock_value;
+    // static logic [DATA_WIDTH-1:0] timer_cr;
 
     static logic response_next_clock = 0;
     static logic [2:0] response_next_clock_value;
@@ -94,7 +99,7 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
     local function automatic void predict( timer_t_transaction t );
         irq_signal = 0;
         cycle_cnt = cycle_cnt + 1;
-        if (cycle_cnt_reset_next_clock) begin
+        if (cycle_cnt_reset_next_clock == 1) begin
             cycle_cnt_reset_next_clock = 0;
             cycle_cnt = 0;
         end
@@ -104,13 +109,13 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
             irq_signal_next_clock = 0;
             timer_cnt_next_clock_value = 0;
             timer_cmp_next_clock_value = 0;
-            timer_cr_next_clock_value = 0;
+            // timer_cr_next_clock_value = 0;
             cycle_cnt_reset_next_clock = 1;
             timer_cnt = 0;
             timer_cmp = 0;
-            timer_cr = 0;
+            // timer_cr = 0;
             t.P_IRQ = 0;
-
+            ctrl_reg = TIMER_CR_DISABLED;
             t.RESPONSE = CP_RSP_IDLE;
             t.DATA_OUT = 0;
             return;
@@ -140,10 +145,23 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
             data_out_next_clock = 0;
             if (reading_cycle_cnt) begin
                 t.DATA_OUT = cycle_cnt[DATA_WIDTH-1:0];
+                data_out_prev = cycle_cnt[DATA_WIDTH-1:0];
             end else begin
                 t.DATA_OUT = data_out_next_clock_value;
+                data_out_prev = data_out_next_clock_value;
             end
+        end else begin
+            t.DATA_OUT = data_out_prev;
         end
+
+        if (ctrl_reg_next_clock == 1) begin
+            ctrl_reg_next_clock = 0;
+            if (ctrl_reg == TIMER_CR_DISABLED && ctrl_reg_next_clock_value != TIMER_CR_DISABLED) begin
+                start_counting_next_clock = 1;
+            end
+            ctrl_reg = ctrl_reg_next_clock_value;
+        end
+
 
         if (t.ADDRESS > TIMER_CYCLE_H) begin
             // out of range access
@@ -166,8 +184,9 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
 
                         end
                         TIMER_CR: begin
-                            timer_cr_next_clock_value = t.DATA_IN;
-                            timer_cr_next_clock = 1;
+                            ctrl_reg_next_clock_value = t.DATA_IN;
+                            ctrl_reg_next_clock = 1;
+                            // ctrl_reg = t.DATA_IN;
                         end
                         TIMER_CYCLE_L: begin
                             // ignore the write request, just acknowledge it
@@ -189,7 +208,7 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
                             data_out_next_clock_value = timer_cmp;
                         end
                         TIMER_CR: begin
-                            data_out_next_clock_value = timer_cr;
+                            data_out_next_clock_value = ctrl_reg;
                         end
                         TIMER_CYCLE_L: begin
                             reading_cycle_cnt = 1;
@@ -211,39 +230,67 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
             endcase;
         end
 
+        // if (timer_cr_next_clock == 1) begin
+        //     timer_cr_next_clock = 0;
+        //     timer_cr = timer_cr_next_clock_value;
+        //     // maybe only sometimes
+        //     ctrl_reg_next_clock_value = timer_cr;
+        //     ctrl_reg_next_clock = 1;
+        // end
+
         if (irq_signal_next_clock == 1) begin
             irq_signal_next_clock = 0;
-            timer_cnt = 0;
             t.P_IRQ = 1;
             irq_signal = 1;
+            if (reset_cnt_next_clock == 1) begin
+                reset_cnt_next_clock = 0;
+                timer_cnt = 0;
+            end
+            
+            if (disable_timer_next_clock == 1) begin
+                disable_timer_next_clock = 0;
+                ctrl_reg = TIMER_CR_DISABLED;
+            end
         end
 
         case (ctrl_reg)
+            TIMER_CR_DISABLED: begin
+            
+            end
             TIMER_CR_AUTO_RESTART: begin
-                if (!irq_signal) begin
+                if (!start_counting_next_clock && !irq_signal) begin
                     timer_cnt = timer_cnt + 1;
                 end
 
-                if (timer_cnt == timer_cmp) begin
-                    // debug print
-                    $display("IRQ signal set at cycle %0d", cycle_cnt);
+                if (timer_cnt == timer_cmp && !irq_signal) begin
                     irq_signal_next_clock = 1;
+                    reset_cnt_next_clock = 1;
+                end
+            end
+            TIMER_CR_ONESHOT: begin
+                if (!start_counting_next_clock && !irq_signal) begin
+                    timer_cnt = timer_cnt + 1;
+                end
+                
+                if (timer_cnt == timer_cmp && !irq_signal) begin
+                    irq_signal_next_clock = 1;
+                    disable_timer_next_clock = 1;
+                    reset_cnt_next_clock = 1;
+                end
+            end
+            TIMER_CR_CONTINUOUS: begin
+                if (!start_counting_next_clock) begin
+                    timer_cnt = timer_cnt + 1;
+                end
+
+                if (timer_cnt == timer_cmp && !irq_signal) begin
+                    irq_signal_next_clock = 1;
+                    reset_cnt_next_clock = 0;
                 end
             end
         endcase;
-
-        if (ctrl_reg_next_clock == 1) begin
-            ctrl_reg_next_clock = 0;
-            ctrl_reg = ctrl_reg_next_clock_value;
-        end
-
-        if (timer_cr_next_clock == 1) begin
-            timer_cr_next_clock = 0;
-            timer_cr = timer_cr_next_clock_value;
-            // maybe only sometimes
-            ctrl_reg_next_clock_value = timer_cr;
-            ctrl_reg_next_clock = 1;
-        end
+        irq_signal = 0;
+        start_counting_next_clock = 0;
 
     endfunction: predict
 
