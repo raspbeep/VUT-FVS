@@ -204,6 +204,10 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
                     response_next_clock = 1;
                     response_next_clock_value = CP_RSP_ACK;
                 end
+                CP_REQ_RESERVED: begin
+                    response_next_clock = 1;
+                    response_next_clock_value = CP_RSP_ERROR;
+                end
             endcase;
         end
 
