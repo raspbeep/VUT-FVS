@@ -86,7 +86,7 @@ class new_timer_t_sequence_basic extends timer_t_sequence;
         create_and_finish_item();
         create_and_finish_item();
 
-                // reset
+        // reset
         default_RST     = RST_ACT_LEVEL;
         default_ADDRESS = 0;
         default_REQUEST = 0;

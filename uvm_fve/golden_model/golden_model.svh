@@ -12,34 +12,42 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
     static logic [2:0]            RESPONSE;
     static logic [DATA_WIDTH-1:0] DATA_OUT;
 
+    static logic data_out_next_clock = 0;
+    // indicates reading from cycle count, the value is immediate
+    // otherwise the value of cmp_reg, cnt_reg, ctrl_reg is from the previous clock
+    static logic reading_cycle_cnt = 0;
+    static logic [DATA_WIDTH-1:0] data_out_next_clock_value;
+
     // local variables for predict
-    static logic cycle_cnt_reset_next_clock;
+    static logic cycle_cnt_reset_next_clock = 0;
     static logic [(DATA_WIDTH*2)-1:0] cycle_cnt = 0;
     static logic irq_signal;
 
-    static logic ctrl_reg_next_clock;
+    static logic ctrl_reg_next_clock = 0;
     static logic [1:0] ctrl_reg_next_clock_value;
     static logic [1:0] ctrl_reg = TIMER_CR_DISABLED;
 
-    static logic [1:0] reset_signal = 0;
-    static logic [1:0] disabled_signal = 0;
+    static logic reset_signal = 0;
+    static logic disabled_signal = 0;
     static logic irq_signal_next_clock = 0;
     static logic [DATA_WIDTH-1:0] address;
     static logic [DATA_WIDTH-1:0] data_out;
     static logic [DATA_WIDTH-1:0] data_in;
 
-    static logic timer_cnt_next_clock;
+    static logic timer_cnt_next_clock = 0;
     static logic [DATA_WIDTH-1:0] timer_cnt_next_clock_value;
     static logic [DATA_WIDTH-1:0] timer_cnt;
 
-    static logic timer_cmp_next_clock;
+    static logic timer_cmp_next_clock = 0;
     static logic [DATA_WIDTH-1:0] timer_cmp_next_clock_value;    
     static logic [DATA_WIDTH-1:0] timer_cmp;
 
-    static logic timer_cr_next_clock;
+    static logic timer_cr_next_clock = 0;
     static logic [DATA_WIDTH-1:0] timer_cr_next_clock_value;
     static logic [DATA_WIDTH-1:0] timer_cr;
 
+    static logic response_next_clock = 0;
+    static logic [2:0] response_next_clock_value;
 
     // base name prefix for created transactions
     string m_name = "gold";
@@ -86,29 +94,29 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
     local function automatic void predict( timer_t_transaction t );
         irq_signal = 0;
         cycle_cnt = cycle_cnt + 1;
+        if (cycle_cnt_reset_next_clock) begin
+            cycle_cnt_reset_next_clock = 0;
+            cycle_cnt = 0;
+        end
 
-        if (t.RST == RST_ACT_LEVEL) begin
+        if (t.RST === RST_ACT_LEVEL) begin
             reset_signal = 1;
             irq_signal_next_clock = 0;
             timer_cnt_next_clock_value = 0;
             timer_cmp_next_clock_value = 0;
             timer_cr_next_clock_value = 0;
+            cycle_cnt_reset_next_clock = 1;
             timer_cnt = 0;
             timer_cmp = 0;
             timer_cr = 0;
             t.P_IRQ = 0;
-            RESPONSE = CP_RSP_IDLE;
-            DATA_OUT = 0;
-            // ask
-            cycle_cnt_reset_next_clock = 1;
+
+            t.RESPONSE = CP_RSP_IDLE;
+            t.DATA_OUT = 0;
             return;
         end else begin
             reset_signal = 0;
             t.P_IRQ = 0;
-            if (cycle_cnt_reset_next_clock) begin
-                cycle_cnt = 0;
-                cycle_cnt_reset_next_clock = 0;
-            end
         end
 
         if (timer_cmp_next_clock == 1) begin
@@ -121,31 +129,83 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
             timer_cnt = timer_cnt_next_clock_value;
         end
 
-        case (t.REQUEST)
-            CP_REQ_WRITE: begin
-                case (t.ADDRESS)
-                    TIMER_CNT: begin
-                        timer_cnt_next_clock_value = t.DATA_IN;
-                        timer_cnt_next_clock = 1;
-                    end
-                    TIMER_CMP: begin
-                        timer_cmp_next_clock_value = t.DATA_IN;
-                        timer_cmp_next_clock = 1;
+        if (response_next_clock == 1) begin
+            response_next_clock = 0;
+            t.RESPONSE = response_next_clock_value;
+        end else begin
+            t.RESPONSE = CP_RSP_IDLE;
+        end
 
-                    end
-                    TIMER_CR: begin
-                        timer_cr_next_clock_value = t.DATA_IN;
-                        timer_cr_next_clock = 1;
-                    end
-                    TIMER_CYCLE_L: begin
-                        // timer_cycle_l = t.DATA_IN;
-                    end
-                    TIMER_CYCLE_H: begin
-                        // timer_cycle_h = t.DATA_IN;
-                    end
-                endcase;
+        if (data_out_next_clock == 1) begin
+            data_out_next_clock = 0;
+            if (reading_cycle_cnt) begin
+                t.DATA_OUT = cycle_cnt[DATA_WIDTH-1:0];
+            end else begin
+                t.DATA_OUT = data_out_next_clock_value;
             end
-        endcase;
+        end
+
+        if (t.ADDRESS > TIMER_CYCLE_H) begin
+            // out of range access
+            response_next_clock = 1;
+            response_next_clock_value = CP_RSP_OOR;
+        end else if (t.ADDRESS[1:0] != 2'b00) begin
+            response_next_clock = 1;
+            response_next_clock_value = CP_RSP_UNALIGNED;
+        end else begin
+            case (t.REQUEST)
+                CP_REQ_WRITE: begin
+                    case (t.ADDRESS)
+                        TIMER_CNT: begin
+                            timer_cnt_next_clock_value = t.DATA_IN;
+                            timer_cnt_next_clock = 1;
+                        end
+                        TIMER_CMP: begin
+                            timer_cmp_next_clock_value = t.DATA_IN;
+                            timer_cmp_next_clock = 1;
+
+                        end
+                        TIMER_CR: begin
+                            timer_cr_next_clock_value = t.DATA_IN;
+                            timer_cr_next_clock = 1;
+                        end
+                        TIMER_CYCLE_L: begin
+                            // ignore the write request, just acknowledge it
+                        end
+                        TIMER_CYCLE_H: begin
+                            // ignore the write request, just acknowledge it
+                        end
+                    endcase;
+                    response_next_clock = 1;
+                    response_next_clock_value = CP_RSP_ACK;
+                end
+                CP_REQ_READ: begin
+                    reading_cycle_cnt = 0;
+                    case (t.ADDRESS)
+                        TIMER_CNT: begin
+                            data_out_next_clock_value = timer_cnt;
+                        end
+                        TIMER_CMP: begin
+                            data_out_next_clock_value = timer_cmp;
+                        end
+                        TIMER_CR: begin
+                            data_out_next_clock_value = timer_cr;
+                        end
+                        TIMER_CYCLE_L: begin
+                            reading_cycle_cnt = 1;
+                            // no data out value, we need the read it next clock
+                        end
+                        TIMER_CYCLE_H: begin
+                            reading_cycle_cnt = 1;
+                            // no data out value, we need the read it next clock
+                        end
+                    endcase;
+                    data_out_next_clock = 1;
+                    response_next_clock = 1;
+                    response_next_clock_value = CP_RSP_ACK;
+                end
+            endcase;
+        end
 
         if (irq_signal_next_clock == 1) begin
             irq_signal_next_clock = 0;
