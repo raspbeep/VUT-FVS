@@ -117,15 +117,21 @@ property irqAfterCmpCntMatch;
 endproperty
 
 property clearCntAfterCmpCntMatchAutoRestart;
-    @(posedge CLK) ((cnt_reg_d === cmp_reg_d) && (ctrl_reg_d === TIMER_CR_AUTO_RESTART)) |-> ##1 ( cnt_reg_d === 0 );
+    @(posedge CLK) ((cnt_reg_d === cmp_reg_d) && (ctrl_reg_d === TIMER_CR_AUTO_RESTART)
+        && !((REQUEST == CP_REQ_WRITE && DATA_IN != TIMER_CR_DISABLED)))
+        |-> ##1 ( cnt_reg_d === 0 );
 endproperty
 
 property incCntAfterCmpCntMatchContinuous;
-    @(posedge CLK) ((cnt_reg_d === cmp_reg_d) && (ctrl_reg_d === TIMER_CR_CONTINUOUS)) |-> ##1 ( cnt_reg_d === $past(cnt_reg_d) + 1 );
+    @(posedge CLK) ((cnt_reg_d === cmp_reg_d) && (ctrl_reg_d === TIMER_CR_CONTINUOUS)
+        && !((REQUEST == CP_REQ_WRITE && DATA_IN != TIMER_CR_DISABLED)) )
+        |-> ##1 ( cnt_reg_d === $past(cnt_reg_d) + 1 );
 endproperty
 
 property clearCntDisAfterCmpCntMatchOneShot;
-    @(posedge CLK) ((cnt_reg_d === cmp_reg_d) && (ctrl_reg_d === TIMER_CR_ONESHOT)) |-> ##1 (cnt_reg_d === 0 && ctrl_reg_d === TIMER_CR_DISABLED);
+    @(posedge CLK) ((cnt_reg_d === cmp_reg_d) && (ctrl_reg_d === TIMER_CR_ONESHOT)
+        && !((REQUEST == CP_REQ_WRITE && DATA_IN != TIMER_CR_DISABLED)) )
+        |-> ##1 (cnt_reg_d === 0 && ctrl_reg_d === TIMER_CR_DISABLED);
 endproperty
 
 property cycleLRead;
@@ -167,7 +173,7 @@ else
     // Fail action block
     begin
         // Using fatal as in the original code
-        `uvm_fatal("ABV_TIMER_ASSERT", "Assertion pr2 FAILED: cycle_cnt not reset correctly when RST === 0.")
+        `uvm_error("ABV_TIMER_ASSERT", "Assertion pr2 FAILED: cycle_cnt not reset correctly when RST === 0.")
     end
 
 // You defined pr3 but didn't assert it, let's add it:
@@ -191,7 +197,7 @@ SignalsDefined: assert property(prUnknown)
         // Fail action block
         begin
             // Using fatal as in the original code
-            `uvm_fatal("InputSignalNotUnknown", "Assertion prUnknown FAILED: DATA_IN and DATA_OUT are unknown.")
+            `uvm_error("InputSignalNotUnknown", "Assertion prUnknown FAILED: DATA_IN and DATA_OUT are unknown.")
         end
 
 // a   prUnknownDataRead

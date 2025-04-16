@@ -107,6 +107,12 @@ class write_registers_sequence_basic extends timer_t_sequence;
 
         ///////////////////////////////////////////
 
+        // write to cmp
+        default_ADDRESS = TIMER_CMP; // 8'h00
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 32'b11111111111111111111111111111111;
+        create_and_finish_item();
+
         // write to cnt
         default_ADDRESS = TIMER_CNT; // 8'h00
         default_REQUEST = CP_REQ_WRITE; // 2'b10
@@ -114,6 +120,53 @@ class write_registers_sequence_basic extends timer_t_sequence;
         create_and_finish_item();
 
         // wait for irq and 
+        default_ADDRESS = 0;
+        default_REQUEST = 0;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+
+        ///////////////////////////////////////////
+        // write to cycle_l, cycle_h should have no effect, just acknowledge
+        
+        // write to cycle_l
+        default_ADDRESS = TIMER_CYCLE_L; // 8'h00
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 42;
+        create_and_finish_item();
+
+        // write to cycle_h
+        default_ADDRESS = TIMER_CYCLE_H; // 8'h00
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 42;
+        create_and_finish_item();
+
+        ///////////////////////////////////////////
+        // read from all registers
+        default_ADDRESS = TIMER_CR;
+        default_REQUEST = CP_REQ_READ;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+
+        default_ADDRESS = TIMER_CNT;
+        default_REQUEST = CP_REQ_READ;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+
+        default_ADDRESS = TIMER_CMP;
+        default_REQUEST = CP_REQ_READ;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+
+        default_ADDRESS = TIMER_CYCLE_L;
+        default_REQUEST = CP_REQ_READ;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+
+        default_ADDRESS = TIMER_CYCLE_H;
+        default_REQUEST = CP_REQ_READ;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+
         default_ADDRESS = 0;
         default_REQUEST = 0;
         default_DATA_IN = 0;

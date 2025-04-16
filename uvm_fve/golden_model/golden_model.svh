@@ -16,7 +16,8 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
     static logic [DATA_WIDTH-1:0] data_out_prev = 0;
     // indicates reading from cycle count, the value is immediate
     // otherwise the value of cmp_reg, cnt_reg, ctrl_reg is from the previous clock
-    static logic reading_cycle_cnt = 0;
+    static logic reading_cycle_cnt_l = 0;
+    static logic reading_cycle_cnt_h = 0;
     static logic [DATA_WIDTH-1:0] data_out_next_clock_value;
 
     static logic start_counting_next_clock = 0;
@@ -134,9 +135,12 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
 
         if (data_out_next_clock == 1) begin
             data_out_next_clock = 0;
-            if (reading_cycle_cnt) begin
-                t.DATA_OUT = cycle_cnt[DATA_WIDTH-1:0];
-                data_out_prev = cycle_cnt[DATA_WIDTH-1:0];
+            if (reading_cycle_cnt_l) begin
+                t.DATA_OUT = cycle_cnt[31:0];
+                data_out_prev = cycle_cnt[31:0];
+            end else if (reading_cycle_cnt_h) begin
+                t.DATA_OUT = cycle_cnt[63:32];
+                data_out_prev = cycle_cnt[63:32];
             end else begin
                 t.DATA_OUT = data_out_next_clock_value;
                 data_out_prev = data_out_next_clock_value;
@@ -260,7 +264,8 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
                         response_next_clock_value = CP_RSP_ACK;
                     end
                     CP_REQ_READ: begin
-                        reading_cycle_cnt = 0;
+                        reading_cycle_cnt_l = 0;
+                        reading_cycle_cnt_h = 0;
                         case (t.ADDRESS)
                             TIMER_CNT: begin
                                 data_out_next_clock_value = timer_cnt;
@@ -272,11 +277,11 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
                                 data_out_next_clock_value = ctrl_reg;
                             end
                             TIMER_CYCLE_L: begin
-                                reading_cycle_cnt = 1;
+                                reading_cycle_cnt_l = 1;
                                 // no data out value, we need the read it next clock
                             end
                             TIMER_CYCLE_H: begin
-                                reading_cycle_cnt = 1;
+                                reading_cycle_cnt_h = 1;
                                 // no data out value, we need the read it next clock
                             end
                         endcase;
