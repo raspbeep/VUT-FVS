@@ -1,6 +1,282 @@
-# coverage read -dataset final ucdb/final.ucdb
-# ucdb/final.ucdb opened as coverage dataset "final"
-# coverage report -html -output covhtmlreport -annotate -details -assert -directive -cvg -code bcefst -threshL 50 -threshH 90
+# End time: 14:22:46 on Apr 16,2025, Elapsed time: 0:00:50
+# Errors: 2, Warnings: 1
+# QuestaSim-64 vcom 2019.4 Compiler 2019.10 Oct 15 2019
+# Start time: 14:22:46 on Apr 16,2025
+# vcom -reportprogress 300 -explicit -2008 -source "+cover=sbcef" -nowarn 13 -work work ../rtl/./timer_fvs.vhd -just pe 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Compiling entity timer
+# End time: 14:22:46 on Apr 16,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 2019.4 Compiler 2019.10 Oct 15 2019
+# Start time: 14:22:47 on Apr 16,2025
+# vcom -reportprogress 300 -explicit -2008 -source "+cover=sbcef" -nowarn 13 -work work ../rtl/./timer_fvs.vhd -skip pec 
+# -- Loading package STANDARD
+# -- Compiling architecture RTL of timer
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package NUMERIC_STD
+# -- Loading entity timer
+# End time: 14:22:47 on Apr 16,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 2019.4 Compiler 2019.10 Oct 15 2019
+# Start time: 14:22:47 on Apr 16,2025
+# vcom -reportprogress 300 -explicit -2008 -source "+cover=sbcef" -nowarn 13 -work work ../rtl/./timer_fvs.vhd -just c 
+# End time: 14:22:47 on Apr 16,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vlog 2019.4 Compiler 2019.10 Oct 15 2019
+# Start time: 14:22:47 on Apr 16,2025
+# vlog -reportprogress 300 -sv -incr -source -timescale 1ps/1ps -work work test_parameters.sv agents/./sv_agent_pkg.sv golden_model/sv_golden_model_pkg.sv env_lib/./sv_env_pkg.sv test_lib/./sv_test_pkg.sv agents/./ifc.sv abv/./abv_timer.sv regmodel/./registers_pkg.sv top_level.sv 
+# ** Note: (vlog-2286) test_parameters.sv(4): Using implicit +incdir+/opt/questasim_2019_4/questasim/uvm-1.1d/../verilog_src/uvm-1.1d/src from import uvm_pkg
+# -- Skipping package sv_param_pkg
+# -- Skipping package sv_timer_t_agent_pkg
+# -- Compiling package sv_timer_t_gm_pkg
+# -- Compiling package sv_timer_t_env_pkg
+# -- Compiling package sv_timer_t_test_pkg
+# -- Skipping interface itimer_itf
+# -- Skipping interface dut_internal_if
+# -- Skipping package ifc_sv_unit
+# -- Skipping module abv_timer
+# -- Skipping package abv_timer_sv_unit
+# -- Skipping package registers_pkg
+# -- Compiling module top
+# 
+# Top level modules:
+# 	top
+# End time: 14:22:47 on Apr 16,2025, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# vsim -voptargs=""+acc=arn"" -msgmode both -assertdebug -t 1ps -lib work top "+UVM_TESTNAME=write_registers_test" 
+# Start time: 14:22:47 on Apr 16,2025
+# ** Note: (vsim-3813) Design is being optimized due to module recompilation...
+# Loading sv_std.std
+# Loading work.itimer_itf(fast)
+# Loading work.dut_internal_if(fast)
+# Loading mtiUvm.uvm_pkg
+# Loading work.sv_param_pkg(fast)
+# Loading work.sv_timer_t_agent_pkg(fast)
+# Loading work.registers_pkg(fast)
+# Loading work.sv_timer_t_gm_pkg(fast)
+# Loading work.sv_timer_t_env_pkg(fast)
+# Loading work.sv_timer_t_test_pkg(fast)
+# Loading mtiUvm.questa_uvm_pkg(fast)
+# Loading work.top(fast)
+# Loading work.ifc_sv_unit(fast)
+# Loading work.itimer_itf(fast)
+# Loading std.standard
+# Loading verilog.vl_resolve(body)
+# Loading std.textio(body)
+# Loading ieee.std_logic_1164(body)
+# Loading ieee.numeric_std(body)
+# Loading verilog.vl_types(body)
+# Loading work.timer(rtl)#1
+# Loading work.dut_internal_if(fast)
+# Loading work.abv_timer(fast)
+# Loading /opt/questasim_2019_4/questasim/uvm-1.1d/linux_x86_64/uvm_dpi.so
+# /top/dut
+# /top/dut/HDL_DUT_U
+# ----------------------------------------------------------------
+# UVM-1.1d
+# (C) 2007-2013 Mentor Graphics Corporation
+# (C) 2007-2013 Cadence Design Systems, Inc.
+# (C) 2006-2013 Synopsys, Inc.
+# (C) 2011-2013 Cypress Semiconductor Corp.
+# ----------------------------------------------------------------
+# 
+#   ***********       IMPORTANT RELEASE NOTES         ************
+# 
+#   You are using a version of the UVM library that has been compiled
+#   with `UVM_NO_DEPRECATED undefined.
+#   See http://www.eda.org/svdb/view.php?id=3313 for more details.
+# 
+#   You are using a version of the UVM library that has been compiled
+#   with `UVM_OBJECT_MUST_HAVE_CONSTRUCTOR undefined.
+#   See http://www.eda.org/svdb/view.php?id=3770 for more details.
+# 
+#       (Specify +UVM_NO_RELNOTES to turn off this notice)
+# 
+# UVM_INFO verilog_src/questa_uvm_pkg-1.2/src/questa_uvm_pkg.sv(277) @ 0: reporter [Questa UVM] QUESTA_UVM-1.2.3
+# UVM_INFO verilog_src/questa_uvm_pkg-1.2/src/questa_uvm_pkg.sv(278) @ 0: reporter [Questa UVM]  questa_uvm::init(+struct)
+# UVM_INFO @ 0 ns: reporter [RNTST] Running test write_registers_test...
+# include_coverage not located
+#   did you mean recording_detail?
+# include_coverage not located
+#   did you mean recording_detail?
+# ** Warning: In instance '\/sv_timer_t_agent_pkg::timer_t_coverage::FunctionalCoverage ' the 'option.per_instance' is set to '0' (false). Assignment to members 'weight', 'goal' and 'comment' of 'option' would not have any effect.
+# UVM_INFO abv/./abv_timer.sv(153) @ 20 ns: reporter [ABV_TIMER_ASSERT] Assertion pr1 PASSED: ctrl_reg_d reset correctly.
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 30 ns Started: 20 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_idleResponseToNonReq File: abv/./abv_timer.sv Line: 217
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 30 ns Started: 20 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_cycleCntZeroDuringReset File: abv/./abv_timer.sv Line: 242
+# UVM_INFO abv/./abv_timer.sv(153) @ 30 ns: reporter [ABV_TIMER_ASSERT] Assertion pr1 PASSED: ctrl_reg_d reset correctly.
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 40 ns Started: 30 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_idleResponseToNonReq File: abv/./abv_timer.sv Line: 217
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 40 ns Started: 30 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_cycleCntZeroDuringReset File: abv/./abv_timer.sv Line: 242
+# UVM_INFO abv/./abv_timer.sv(188) @ 40 ns: reporter [InputSignalNotUnknown] Assertion prUnknown PASSED: DATA_IN and DATA_OUT are always known.
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 50 ns Started: 40 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_ackAfterCorrectAddr File: abv/./abv_timer.sv Line: 214
+# UVM_INFO abv/./abv_timer.sv(188) @ 50 ns: reporter [InputSignalNotUnknown] Assertion prUnknown PASSED: DATA_IN and DATA_OUT are always known.
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 60 ns Started: 50 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_ackAfterCorrectAddr File: abv/./abv_timer.sv Line: 214
+# UVM_INFO abv/./abv_timer.sv(188) @ 60 ns: reporter [InputSignalNotUnknown] Assertion prUnknown PASSED: DATA_IN and DATA_OUT are always known.
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 70 ns Started: 60 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_irqAfterCmpCntMatch File: abv/./abv_timer.sv Line: 224
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 70 ns Started: 60 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_clearCntAfterCmpCntMatchAutoRestart File: abv/./abv_timer.sv Line: 227
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 70 ns Started: 60 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_ackAfterCorrectAddr File: abv/./abv_timer.sv Line: 214
+# UVM_INFO abv/./abv_timer.sv(188) @ 70 ns: reporter [InputSignalNotUnknown] Assertion prUnknown PASSED: DATA_IN and DATA_OUT are always known.
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 80 ns Started: 70 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_irqAfterCmpCntMatch File: abv/./abv_timer.sv Line: 224
+# ** Error: ACK did not follow REQ within 2 cycles
+#    Time: 80 ns Started: 70 ns  Scope: top.HDL_DUT_U.abv_timer_module.a_clearCntDisAfterCmpCntMatchOneShot File: abv/./abv_timer.sv Line: 232 Expr: ctrl_reg_d===TIMER_CR_DISABLED
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 80 ns Started: 70 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_ackAfterCorrectAddr File: abv/./abv_timer.sv Line: 214
+# UVM_INFO abv/./abv_timer.sv(188) @ 80 ns: reporter [InputSignalNotUnknown] Assertion prUnknown PASSED: DATA_IN and DATA_OUT are always known.
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 90 ns Started: 80 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_irqAfterCmpCntMatch File: abv/./abv_timer.sv Line: 224
+# ** Error: ACK did not follow REQ within 2 cycles
+#    Time: 90 ns Started: 80 ns  Scope: top.HDL_DUT_U.abv_timer_module.a_incCntAfterCmpCntMatchContinuous File: abv/./abv_timer.sv Line: 229 Expr: cnt_reg_d===$past(cnt_reg_d)+1
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 90 ns Started: 80 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_ackAfterCorrectAddr File: abv/./abv_timer.sv Line: 214
+# UVM_INFO abv/./abv_timer.sv(188) @ 90 ns: reporter [InputSignalNotUnknown] Assertion prUnknown PASSED: DATA_IN and DATA_OUT are always known.
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 100 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# ---------------------------------------------------
+# Name          Type                 Size  Value     
+# ---------------------------------------------------
+# gold: 90 ns   timer_t_transaction  -     @882      
+#   begin_time  time                 64    90 ns     
+#   RST         integral             1     'h1       
+#   REQUEST     integral             2     'h2       
+#   ADDRESS     integral             32    'h0       
+#   DATA_IN     integral             32    'hffffffff
+#   RESPONSE    integral             3     'h1       
+#   DATA_OUT    integral             32    'h0       
+#   P_IRQ       integral             1     'h0       
+# ---------------------------------------------------
+# 
+# -------------------------------------------------
+# Name        Type                 Size  Value     
+# -------------------------------------------------
+# dut: 90 ns  timer_t_transaction  -     @874      
+#   RST       integral             1     'h1       
+#   REQUEST   integral             2     'h2       
+#   ADDRESS   integral             32    'h0       
+#   DATA_IN   integral             32    'hffffffff
+#   RESPONSE  integral             3     'h1       
+#   DATA_OUT  integral             32    'h0       
+#   P_IRQ     integral             1     'h1       
+# -------------------------------------------------
 # 
 # 
-#  quit -f
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 100 ns Started: 90 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_irqAfterCmpCntMatch File: abv/./abv_timer.sv Line: 224
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 100 ns Started: 90 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_incCntAfterCmpCntMatchContinuous File: abv/./abv_timer.sv Line: 230
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 100 ns Started: 90 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_ackAfterCorrectAddr File: abv/./abv_timer.sv Line: 214
+# UVM_INFO abv/./abv_timer.sv(188) @ 100 ns: reporter [InputSignalNotUnknown] Assertion prUnknown PASSED: DATA_IN and DATA_OUT are always known.
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 110 ns Started: 100 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_ackAfterCorrectAddr File: abv/./abv_timer.sv Line: 214
+# UVM_INFO abv/./abv_timer.sv(188) @ 110 ns: reporter [InputSignalNotUnknown] Assertion prUnknown PASSED: DATA_IN and DATA_OUT are always known.
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 120 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# -----------------------------------------------
+# Name          Type                 Size  Value 
+# -----------------------------------------------
+# gold: 110 ns  timer_t_transaction  -     @906  
+#   begin_time  time                 64    110 ns
+#   RST         integral             1     'h1   
+#   REQUEST     integral             2     'h2   
+#   ADDRESS     integral             32    'h4   
+#   DATA_IN     integral             32    'h0   
+#   RESPONSE    integral             3     'h0   
+#   DATA_OUT    integral             32    'h0   
+#   P_IRQ       integral             1     'h1   
+# -----------------------------------------------
+# 
+# ---------------------------------------------
+# Name         Type                 Size  Value
+# ---------------------------------------------
+# dut: 110 ns  timer_t_transaction  -     @898 
+#   RST        integral             1     'h1  
+#   REQUEST    integral             2     'h2  
+#   ADDRESS    integral             32    'h4  
+#   DATA_IN    integral             32    'h0  
+#   RESPONSE   integral             3     'h0  
+#   DATA_OUT   integral             32    'h0  
+#   P_IRQ      integral             1     'h0  
+# ---------------------------------------------
+# 
+# 
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 120 ns Started: 110 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_idleResponseToNonReq File: abv/./abv_timer.sv Line: 217
+# UVM_INFO abv/./abv_timer.sv(188) @ 120 ns: reporter [InputSignalNotUnknown] Assertion prUnknown PASSED: DATA_IN and DATA_OUT are always known.
+# UVM_ERROR env_lib/./scoreboard.svh(66) @ 130 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
+# -----------------------------------------------
+# Name          Type                 Size  Value 
+# -----------------------------------------------
+# gold: 120 ns  timer_t_transaction  -     @918  
+#   begin_time  time                 64    120 ns
+#   RST         integral             1     'h1   
+#   REQUEST     integral             2     'h2   
+#   ADDRESS     integral             32    'h4   
+#   DATA_IN     integral             32    'h1   
+#   RESPONSE    integral             3     'h1   
+#   DATA_OUT    integral             32    'h0   
+#   P_IRQ       integral             1     'h0   
+# -----------------------------------------------
+# 
+# ---------------------------------------------
+# Name         Type                 Size  Value
+# ---------------------------------------------
+# dut: 120 ns  timer_t_transaction  -     @910 
+#   RST        integral             1     'h1  
+#   REQUEST    integral             2     'h2  
+#   ADDRESS    integral             32    'h4  
+#   DATA_IN    integral             32    'h1  
+#   RESPONSE   integral             3     'h1  
+#   DATA_OUT   integral             32    'h0  
+#   P_IRQ      integral             1     'h1  
+# ---------------------------------------------
+# 
+# 
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 130 ns Started: 120 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_irqAfterCmpCntMatch File: abv/./abv_timer.sv Line: 224
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 130 ns Started: 120 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_ackAfterCorrectAddr File: abv/./abv_timer.sv Line: 214
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 130 ns Started: 120 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_incCntAfterCmpCntMatchContinuous File: abv/./abv_timer.sv Line: 230
+# UVM_INFO abv/./abv_timer.sv(188) @ 130 ns: reporter [InputSignalNotUnknown] Assertion prUnknown PASSED: DATA_IN and DATA_OUT are always known.
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 140 ns Started: 130 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_ackAfterCorrectAddr File: abv/./abv_timer.sv Line: 214
+# UVM_INFO abv/./abv_timer.sv(188) @ 140 ns: reporter [InputSignalNotUnknown] Assertion prUnknown PASSED: DATA_IN and DATA_OUT are always known.
+# ** Info: Correct REQ/ACK sequence observed
+#    Time: 150 ns Started: 140 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_ackAfterCorrectAddr File: abv/./abv_timer.sv Line: 214
+# UVM_INFO abv/./abv_timer.sv(188) @ 150 ns: reporter [InputSignalNotUnknown] Assertion prUnknown PASSED: DATA_IN and DATA_OUT are always known.
+# UVM_INFO verilog_src/uvm-1.1d/src/base/uvm_objection.svh(1267) @ 160 ns: reporter [TEST_DONE] 'run' phase is ready to proceed to the 'extract' phase
+# UVM_INFO env_lib/./scoreboard.svh(91) @ 160 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [FINAL STATUS] The result for timer VERIFICATION is FAIL, 3/15 , mismatches!
+# 
+# --- UVM Report Summary ---
+# 
+# ** Report counts by severity
+# UVM_INFO :   19
+# UVM_WARNING :    0
+# UVM_ERROR :    3
+# UVM_FATAL :    0
+# ** Report counts by id
+# [ABV_TIMER_ASSERT]     2
+# [Comparison in SCOREBOARD:]     3
+# [FINAL STATUS]     1
+# [InputSignalNotUnknown]    12
+# [Questa UVM]     2
+# [RNTST]     1
+# [TEST_DONE]     1
+# ** Note: $finish    : /opt/questasim_2019_4/questasim/linux_x86_64/../verilog_src/uvm-1.1d/src/base/uvm_root.svh(430)
+#    Time: 160 ns  Iteration: 64  Instance: /top
+# Break in Task uvm_pkg/uvm_root::run_test at /opt/questasim_2019_4/questasim/linux_x86_64/../verilog_src/uvm-1.1d/src/base/uvm_root.svh line 430
+# Executing coverage save command: coverage save ./ucdb/write_registers_test.ucdb
+# Coverage data saved successfully to ./ucdb/write_registers_test.ucdb
+# Ensure simulation was run with 'vsim -coverage' and code compiled with '+cover=...' for data to be present.
+# MACRO ./start.tcl PAUSED at line 148

@@ -38,6 +38,7 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
 
     static logic disable_timer_next_clock = 0;
     static logic reset_cnt_next_clock = 0;
+    static logic reset_cnt_this_clock = 0;
 
     static logic timer_cnt_next_clock = 0;
     static logic [DATA_WIDTH-1:0] timer_cnt_next_clock_value;
@@ -47,12 +48,10 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
     static logic [DATA_WIDTH-1:0] timer_cmp_next_clock_value;    
     static logic [DATA_WIDTH-1:0] timer_cmp;
 
-    // static logic timer_cr_next_clock = 0;
-    // static logic [DATA_WIDTH-1:0] timer_cr_next_clock_value;
-    // static logic [DATA_WIDTH-1:0] timer_cr;
-
     static logic response_next_clock = 0;
     static logic [2:0] response_next_clock_value;
+    
+    static logic resetting_this_clock = 0;
 
     // base name prefix for created transactions
     string m_name = "gold";
@@ -162,6 +161,81 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
             ctrl_reg = ctrl_reg_next_clock_value;
         end
 
+        if (irq_signal_next_clock == 1) begin
+            irq_signal_next_clock = 0;
+            t.P_IRQ = 1;
+            irq_signal = 1;
+            
+            if (disable_timer_next_clock == 1) begin
+                disable_timer_next_clock = 0;
+                ctrl_reg = TIMER_CR_DISABLED;
+            end
+        end
+        if (ctrl_reg != TIMER_CR_DISABLED && start_counting_next_clock != 1) begin
+            if (timer_cnt == 32'hffffffff) begin
+                timer_cnt = 0;
+            end else begin
+                timer_cnt = timer_cnt + 1;
+            end
+        end
+        
+        case (ctrl_reg)
+            TIMER_CR_DISABLED: begin
+            
+            end
+            TIMER_CR_AUTO_RESTART: begin
+                if (timer_cnt == timer_cmp) begin
+                    irq_signal_next_clock = 1;
+                    reset_cnt_next_clock = 1;
+                end
+            end
+            TIMER_CR_ONESHOT: begin
+                if (timer_cnt == timer_cmp) begin
+                    irq_signal_next_clock = 1;
+                    disable_timer_next_clock = 1;
+                    reset_cnt_next_clock = 1;
+                end
+            end
+            TIMER_CR_CONTINUOUS: begin
+                if (timer_cnt == timer_cmp) begin
+                    irq_signal_next_clock = 1;
+                    reset_cnt_next_clock = 0;
+                end
+            end
+        endcase;
+
+        // irq_signal = 0;
+        start_counting_next_clock = 0;
+        // reset_cnt_this_clock = 0;
+
+        if (reset_cnt_next_clock == 1) begin
+            reset_cnt_next_clock = 0;
+            timer_cnt = 0;
+        end
+
+        case (ctrl_reg)
+            TIMER_CR_DISABLED: begin
+            end
+            TIMER_CR_AUTO_RESTART: begin
+                if (timer_cnt == timer_cmp) begin
+                    irq_signal_next_clock = 1;
+                    reset_cnt_next_clock = 1;
+                end
+            end
+            TIMER_CR_ONESHOT: begin
+                if (timer_cnt == timer_cmp) begin
+                    irq_signal_next_clock = 1;
+                    disable_timer_next_clock = 1;
+                    reset_cnt_next_clock = 1;
+                end
+            end
+            TIMER_CR_CONTINUOUS: begin
+                if (timer_cnt == timer_cmp) begin
+                    irq_signal_next_clock = 1;
+                    reset_cnt_next_clock = 0;
+                end
+            end
+        endcase;
 
         if (t.ADDRESS > TIMER_CYCLE_H) begin
             // out of range access
@@ -186,6 +260,7 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
                         TIMER_CR: begin
                             ctrl_reg_next_clock_value = t.DATA_IN;
                             ctrl_reg_next_clock = 1;
+                            disable_timer_next_clock = 0;
                             // ctrl_reg = t.DATA_IN;
                         end
                         TIMER_CYCLE_L: begin
@@ -229,68 +304,6 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
                 end
             endcase;
         end
-
-        // if (timer_cr_next_clock == 1) begin
-        //     timer_cr_next_clock = 0;
-        //     timer_cr = timer_cr_next_clock_value;
-        //     // maybe only sometimes
-        //     ctrl_reg_next_clock_value = timer_cr;
-        //     ctrl_reg_next_clock = 1;
-        // end
-
-        if (irq_signal_next_clock == 1) begin
-            irq_signal_next_clock = 0;
-            t.P_IRQ = 1;
-            irq_signal = 1;
-            if (reset_cnt_next_clock == 1) begin
-                reset_cnt_next_clock = 0;
-                timer_cnt = 0;
-            end
-            
-            if (disable_timer_next_clock == 1) begin
-                disable_timer_next_clock = 0;
-                ctrl_reg = TIMER_CR_DISABLED;
-            end
-        end
-
-        case (ctrl_reg)
-            TIMER_CR_DISABLED: begin
-            
-            end
-            TIMER_CR_AUTO_RESTART: begin
-                if (!start_counting_next_clock && !irq_signal) begin
-                    timer_cnt = timer_cnt + 1;
-                end
-
-                if (timer_cnt == timer_cmp && !irq_signal) begin
-                    irq_signal_next_clock = 1;
-                    reset_cnt_next_clock = 1;
-                end
-            end
-            TIMER_CR_ONESHOT: begin
-                if (!start_counting_next_clock && !irq_signal) begin
-                    timer_cnt = timer_cnt + 1;
-                end
-                
-                if (timer_cnt == timer_cmp && !irq_signal) begin
-                    irq_signal_next_clock = 1;
-                    disable_timer_next_clock = 1;
-                    reset_cnt_next_clock = 1;
-                end
-            end
-            TIMER_CR_CONTINUOUS: begin
-                if (!start_counting_next_clock) begin
-                    timer_cnt = timer_cnt + 1;
-                end
-
-                if (timer_cnt == timer_cmp && !irq_signal) begin
-                    irq_signal_next_clock = 1;
-                    reset_cnt_next_clock = 0;
-                end
-            end
-        endcase;
-        irq_signal = 0;
-        start_counting_next_clock = 0;
 
     endfunction: predict
 

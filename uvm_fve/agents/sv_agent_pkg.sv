@@ -9,6 +9,8 @@ package sv_timer_t_agent_pkg;
     `include "driver.svh"
     `include "sequencer.svh"
     `include "sequence.svh"
-    `include "new_sequence.svh"
     `include "agent.svh"
+    `include "new_sequence.svh"
+    `include "write_registers_sequence.svh"
+    
 endpackage: sv_timer_t_agent_pkg

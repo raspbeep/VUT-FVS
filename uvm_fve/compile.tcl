@@ -84,6 +84,7 @@ proc compile_sources { LIBRARY HDL_DIRECTORY } {
       [file join test_lib . sv_test_pkg.sv] \
       [file join agents . ifc.sv] \
       [file join abv . abv_timer.sv] \
+      [file join regmodel . registers_pkg.sv] \
       top_level.sv  \
     ]
 

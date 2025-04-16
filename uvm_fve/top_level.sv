@@ -6,6 +6,7 @@ module top;
     import sv_timer_t_agent_pkg::*;
     import sv_timer_t_env_pkg::*;
     import sv_timer_t_test_pkg::*;
+    import registers_pkg::*;
 
     // Global clock signal definition
     logic CLK;
