@@ -52,6 +52,7 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
     static logic [2:0] response_next_clock_value;
     
     static logic resetting_this_clock = 0;
+    static logic disabling_this_clock = 0;
 
     // base name prefix for created transactions
     string m_name = "gold";
@@ -108,11 +109,12 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
             irq_signal_next_clock = 0;
             timer_cnt_next_clock_value = 0;
             timer_cmp_next_clock_value = 0;
-            // timer_cr_next_clock_value = 0;
+            response_next_clock = 0;
+            response_next_clock_value = CP_RSP_IDLE;
             cycle_cnt_reset_next_clock = 1;
             timer_cnt = 0;
             timer_cmp = 0;
-            // timer_cr = 0;
+
             t.P_IRQ = 0;
             ctrl_reg = TIMER_CR_DISABLED;
             t.RESPONSE = CP_RSP_IDLE;
@@ -121,16 +123,6 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
         end else begin
             reset_signal = 0;
             t.P_IRQ = 0;
-        end
-
-        if (timer_cmp_next_clock == 1) begin
-            timer_cmp_next_clock = 0;
-            timer_cmp = timer_cmp_next_clock_value;
-        end
-
-        if (timer_cnt_next_clock == 1) begin
-            timer_cnt_next_clock = 0;
-            timer_cnt = timer_cnt_next_clock_value;
         end
 
         if (response_next_clock == 1) begin
@@ -153,83 +145,76 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
             t.DATA_OUT = data_out_prev;
         end
 
-        if (ctrl_reg_next_clock == 1) begin
-            ctrl_reg_next_clock = 0;
-            if (ctrl_reg == TIMER_CR_DISABLED && ctrl_reg_next_clock_value != TIMER_CR_DISABLED) begin
-                start_counting_next_clock = 1;
-            end
-            ctrl_reg = ctrl_reg_next_clock_value;
+        if (disable_timer_next_clock == 1) begin
+            ctrl_reg = TIMER_CR_DISABLED;
+            disabling_this_clock = 1;
         end
 
-        if (irq_signal_next_clock == 1) begin
-            irq_signal_next_clock = 0;
-            t.P_IRQ = 1;
-            irq_signal = 1;
-            
-            if (disable_timer_next_clock == 1) begin
-                disable_timer_next_clock = 0;
-                ctrl_reg = TIMER_CR_DISABLED;
+        if (ctrl_reg_next_clock == 1) begin
+            ctrl_reg_next_clock = 0;
+            if (ctrl_reg == TIMER_CR_DISABLED && ctrl_reg_next_clock_value != TIMER_CR_DISABLED && !disabling_this_clock) begin
+                start_counting_next_clock = 1;
             end
+
+            ctrl_reg = ctrl_reg_next_clock_value;
         end
-        if (ctrl_reg != TIMER_CR_DISABLED && start_counting_next_clock != 1) begin
+        disabling_this_clock = 0;
+
+        // -------------------------------------------------
+        // prikaz na nulovanie v aktualnom takte
+        if (reset_cnt_next_clock == 1) begin
+            timer_cnt = 0;
+            reset_cnt_next_clock = 0;
+            reset_cnt_this_clock = 1;
+        end
+
+        // -------------------------------------------------
+        // inkrementacia cnt ak nie je disabled
+        if (ctrl_reg != TIMER_CR_DISABLED && !start_counting_next_clock && !reset_cnt_this_clock) begin
             if (timer_cnt == 32'hffffffff) begin
                 timer_cnt = 0;
             end else begin
                 timer_cnt = timer_cnt + 1;
             end
         end
-        
-        case (ctrl_reg)
-            TIMER_CR_DISABLED: begin
-            
-            end
-            TIMER_CR_AUTO_RESTART: begin
-                if (timer_cnt == timer_cmp) begin
-                    irq_signal_next_clock = 1;
-                    reset_cnt_next_clock = 1;
-                end
-            end
-            TIMER_CR_ONESHOT: begin
-                if (timer_cnt == timer_cmp) begin
-                    irq_signal_next_clock = 1;
-                    disable_timer_next_clock = 1;
-                    reset_cnt_next_clock = 1;
-                end
-            end
-            TIMER_CR_CONTINUOUS: begin
-                if (timer_cnt == timer_cmp) begin
-                    irq_signal_next_clock = 1;
-                    reset_cnt_next_clock = 0;
-                end
-            end
-        endcase;
-
-        // irq_signal = 0;
         start_counting_next_clock = 0;
-        // reset_cnt_this_clock = 0;
+        reset_cnt_this_clock = 0;
 
-        if (reset_cnt_next_clock == 1) begin
-            reset_cnt_next_clock = 0;
-            timer_cnt = 0;
+        // -------------------------------------------------
+        // prikaz na zapis do cnt/cmp
+        if (timer_cmp_next_clock == 1) begin
+            timer_cmp_next_clock = 0;
+            timer_cmp = timer_cmp_next_clock_value;
+        end
+
+        if (timer_cnt_next_clock == 1) begin
+            timer_cnt_next_clock = 0;
+            timer_cnt = timer_cnt_next_clock_value;
+        end
+        // -------------------------------------------------
+
+        if (irq_signal_next_clock == 1) begin
+            t.P_IRQ = 1;
+            irq_signal_next_clock = 0;
         end
 
         case (ctrl_reg)
             TIMER_CR_DISABLED: begin
             end
-            TIMER_CR_AUTO_RESTART: begin
+            TIMER_CR_AUTO_RESTART: begin // 1
                 if (timer_cnt == timer_cmp) begin
                     irq_signal_next_clock = 1;
                     reset_cnt_next_clock = 1;
                 end
             end
-            TIMER_CR_ONESHOT: begin
+            TIMER_CR_ONESHOT: begin // 2
                 if (timer_cnt == timer_cmp) begin
                     irq_signal_next_clock = 1;
                     disable_timer_next_clock = 1;
                     reset_cnt_next_clock = 1;
                 end
             end
-            TIMER_CR_CONTINUOUS: begin
+            TIMER_CR_CONTINUOUS: begin // 3
                 if (timer_cnt == timer_cmp) begin
                     irq_signal_next_clock = 1;
                     reset_cnt_next_clock = 0;
