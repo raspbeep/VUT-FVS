@@ -222,72 +222,74 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
             end
         endcase;
 
-        if (t.ADDRESS > TIMER_CYCLE_H) begin
-            // out of range access
-            response_next_clock = 1;
-            response_next_clock_value = CP_RSP_OOR;
-        end else if (t.ADDRESS[1:0] != 2'b00) begin
-            response_next_clock = 1;
-            response_next_clock_value = CP_RSP_UNALIGNED;
-        end else begin
-            case (t.REQUEST)
-                CP_REQ_WRITE: begin
-                    case (t.ADDRESS)
-                        TIMER_CNT: begin
-                            timer_cnt_next_clock_value = t.DATA_IN;
-                            timer_cnt_next_clock = 1;
-                        end
-                        TIMER_CMP: begin
-                            timer_cmp_next_clock_value = t.DATA_IN;
-                            timer_cmp_next_clock = 1;
+        if (t.REQUEST != CP_REQ_NONE) begin
+            if (t.ADDRESS > TIMER_CYCLE_H) begin
+                // out of range access
+                response_next_clock = 1;
+                response_next_clock_value = CP_RSP_OOR;
+            end else if (t.ADDRESS[1:0] != 2'b00) begin
+                response_next_clock = 1;
+                response_next_clock_value = CP_RSP_UNALIGNED;
+            end else begin
+                case (t.REQUEST)
+                    CP_REQ_WRITE: begin
+                        case (t.ADDRESS)
+                            TIMER_CNT: begin
+                                timer_cnt_next_clock_value = t.DATA_IN;
+                                timer_cnt_next_clock = 1;
+                            end
+                            TIMER_CMP: begin
+                                timer_cmp_next_clock_value = t.DATA_IN;
+                                timer_cmp_next_clock = 1;
 
-                        end
-                        TIMER_CR: begin
-                            ctrl_reg_next_clock_value = t.DATA_IN;
-                            ctrl_reg_next_clock = 1;
-                            disable_timer_next_clock = 0;
-                            // ctrl_reg = t.DATA_IN;
-                        end
-                        TIMER_CYCLE_L: begin
-                            // ignore the write request, just acknowledge it
-                        end
-                        TIMER_CYCLE_H: begin
-                            // ignore the write request, just acknowledge it
-                        end
-                    endcase;
-                    response_next_clock = 1;
-                    response_next_clock_value = CP_RSP_ACK;
-                end
-                CP_REQ_READ: begin
-                    reading_cycle_cnt = 0;
-                    case (t.ADDRESS)
-                        TIMER_CNT: begin
-                            data_out_next_clock_value = timer_cnt;
-                        end
-                        TIMER_CMP: begin
-                            data_out_next_clock_value = timer_cmp;
-                        end
-                        TIMER_CR: begin
-                            data_out_next_clock_value = ctrl_reg;
-                        end
-                        TIMER_CYCLE_L: begin
-                            reading_cycle_cnt = 1;
-                            // no data out value, we need the read it next clock
-                        end
-                        TIMER_CYCLE_H: begin
-                            reading_cycle_cnt = 1;
-                            // no data out value, we need the read it next clock
-                        end
-                    endcase;
-                    data_out_next_clock = 1;
-                    response_next_clock = 1;
-                    response_next_clock_value = CP_RSP_ACK;
-                end
-                CP_REQ_RESERVED: begin
-                    response_next_clock = 1;
-                    response_next_clock_value = CP_RSP_ERROR;
-                end
-            endcase;
+                            end
+                            TIMER_CR: begin
+                                ctrl_reg_next_clock_value = t.DATA_IN;
+                                ctrl_reg_next_clock = 1;
+                                disable_timer_next_clock = 0;
+                                // ctrl_reg = t.DATA_IN;
+                            end
+                            TIMER_CYCLE_L: begin
+                                // ignore the write request, just acknowledge it
+                            end
+                            TIMER_CYCLE_H: begin
+                                // ignore the write request, just acknowledge it
+                            end
+                        endcase;
+                        response_next_clock = 1;
+                        response_next_clock_value = CP_RSP_ACK;
+                    end
+                    CP_REQ_READ: begin
+                        reading_cycle_cnt = 0;
+                        case (t.ADDRESS)
+                            TIMER_CNT: begin
+                                data_out_next_clock_value = timer_cnt;
+                            end
+                            TIMER_CMP: begin
+                                data_out_next_clock_value = timer_cmp;
+                            end
+                            TIMER_CR: begin
+                                data_out_next_clock_value = ctrl_reg;
+                            end
+                            TIMER_CYCLE_L: begin
+                                reading_cycle_cnt = 1;
+                                // no data out value, we need the read it next clock
+                            end
+                            TIMER_CYCLE_H: begin
+                                reading_cycle_cnt = 1;
+                                // no data out value, we need the read it next clock
+                            end
+                        endcase;
+                        data_out_next_clock = 1;
+                        response_next_clock = 1;
+                        response_next_clock_value = CP_RSP_ACK;
+                    end
+                    CP_REQ_RESERVED: begin
+                        response_next_clock = 1;
+                        response_next_clock_value = CP_RSP_ERROR;
+                    end
+                endcase;
+            end
         end
 
     endfunction: predict

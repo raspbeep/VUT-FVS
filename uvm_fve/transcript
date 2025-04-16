@@ -1,17 +1,17 @@
-# End time: 15:20:23 on Apr 16,2025, Elapsed time: 0:07:25
-# Errors: 39, Warnings: 1
+# End time: 15:27:34 on Apr 16,2025, Elapsed time: 0:00:49
+# Errors: 2, Warnings: 1
 # QuestaSim-64 vcom 2019.4 Compiler 2019.10 Oct 15 2019
-# Start time: 15:20:23 on Apr 16,2025
+# Start time: 15:27:34 on Apr 16,2025
 # vcom -reportprogress 300 -explicit -2008 -source "+cover=sbcef" -nowarn 13 -work work ../rtl/./timer_fvs.vhd -just pe 
 # -- Loading package STANDARD
 # -- Loading package TEXTIO
 # -- Loading package std_logic_1164
 # -- Loading package NUMERIC_STD
 # -- Compiling entity timer
-# End time: 15:20:23 on Apr 16,2025, Elapsed time: 0:00:00
+# End time: 15:27:34 on Apr 16,2025, Elapsed time: 0:00:00
 # Errors: 0, Warnings: 0
 # QuestaSim-64 vcom 2019.4 Compiler 2019.10 Oct 15 2019
-# Start time: 15:20:23 on Apr 16,2025
+# Start time: 15:27:34 on Apr 16,2025
 # vcom -reportprogress 300 -explicit -2008 -source "+cover=sbcef" -nowarn 13 -work work ../rtl/./timer_fvs.vhd -skip pec 
 # -- Loading package STANDARD
 # -- Compiling architecture RTL of timer
@@ -19,37 +19,37 @@
 # -- Loading package std_logic_1164
 # -- Loading package NUMERIC_STD
 # -- Loading entity timer
-# End time: 15:20:23 on Apr 16,2025, Elapsed time: 0:00:00
+# End time: 15:27:34 on Apr 16,2025, Elapsed time: 0:00:00
 # Errors: 0, Warnings: 0
 # QuestaSim-64 vcom 2019.4 Compiler 2019.10 Oct 15 2019
-# Start time: 15:20:23 on Apr 16,2025
+# Start time: 15:27:34 on Apr 16,2025
 # vcom -reportprogress 300 -explicit -2008 -source "+cover=sbcef" -nowarn 13 -work work ../rtl/./timer_fvs.vhd -just c 
-# End time: 15:20:23 on Apr 16,2025, Elapsed time: 0:00:00
+# End time: 15:27:34 on Apr 16,2025, Elapsed time: 0:00:00
 # Errors: 0, Warnings: 0
 # QuestaSim-64 vlog 2019.4 Compiler 2019.10 Oct 15 2019
-# Start time: 15:20:23 on Apr 16,2025
+# Start time: 15:27:34 on Apr 16,2025
 # vlog -reportprogress 300 -sv -incr -source -timescale 1ps/1ps -work work test_parameters.sv agents/./sv_agent_pkg.sv golden_model/sv_golden_model_pkg.sv env_lib/./sv_env_pkg.sv test_lib/./sv_test_pkg.sv agents/./ifc.sv abv/./abv_timer.sv regmodel/./registers_pkg.sv top_level.sv 
 # ** Note: (vlog-2286) test_parameters.sv(4): Using implicit +incdir+/opt/questasim_2019_4/questasim/uvm-1.1d/../verilog_src/uvm-1.1d/src from import uvm_pkg
 # -- Skipping package sv_param_pkg
 # -- Skipping package sv_timer_t_agent_pkg
-# -- Compiling package sv_timer_t_gm_pkg
-# -- Compiling package sv_timer_t_env_pkg
-# -- Compiling package sv_timer_t_test_pkg
+# -- Skipping package sv_timer_t_gm_pkg
+# -- Skipping package sv_timer_t_env_pkg
+# -- Skipping package sv_timer_t_test_pkg
 # -- Skipping interface itimer_itf
 # -- Skipping interface dut_internal_if
 # -- Skipping package ifc_sv_unit
 # -- Skipping module abv_timer
 # -- Skipping package abv_timer_sv_unit
 # -- Skipping package registers_pkg
-# -- Compiling module top
+# -- Skipping module top
 # 
 # Top level modules:
 # 	top
-# End time: 15:20:24 on Apr 16,2025, Elapsed time: 0:00:01
+# End time: 15:27:35 on Apr 16,2025, Elapsed time: 0:00:01
 # Errors: 0, Warnings: 0
 # vsim -voptargs=""+acc=arn"" -msgmode both -assertdebug -t 1ps -lib work top "+UVM_TESTNAME=new_timer_t_test" 
-# Start time: 15:20:24 on Apr 16,2025
-# ** Note: (vsim-3813) Design is being optimized due to module recompilation...
+# Start time: 15:27:35 on Apr 16,2025
+# ** Note: (vsim-8009) Loading existing optimized design _opt
 # Loading sv_std.std
 # Loading work.itimer_itf(fast)
 # Loading work.dut_internal_if(fast)
@@ -236,52 +236,22 @@
 #    Time: 340 ns Started: 330 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_cycleCntZeroDuringReset File: abv/./abv_timer.sv Line: 242
 # UVM_ERROR abv/./abv_timer.sv(183) @ 340 ns: reporter [ABV_TIMER_ASSERT] Assertion pr3 FAILED: OOR Address 0x4d8d42c4 did not trigger OOR response (RESPONSE = 0).
 # UVM_INFO abv/./abv_timer.sv(188) @ 340 ns: reporter [InputSignalNotUnknown] Assertion prUnknown PASSED: DATA_IN and DATA_OUT are always known.
-# UVM_ERROR env_lib/./scoreboard.svh(66) @ 350 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [Comparison in SCOREBOARD:] Found miscompare between GM and DUT:
-# ---------------------------------------------------
-# Name          Type                 Size  Value     
-# ---------------------------------------------------
-# gold: 340 ns  timer_t_transaction  -     @1222     
-#   begin_time  time                 64    340 ns    
-#   RST         integral             1     'h1       
-#   REQUEST     integral             2     'h0       
-#   ADDRESS     integral             32    'hf014d352
-#   DATA_IN     integral             32    'hde7d71d6
-#   RESPONSE    integral             3     'h5       
-#   DATA_OUT    integral             32    'h0       
-#   P_IRQ       integral             1     'h0       
-# ---------------------------------------------------
-# 
-# --------------------------------------------------
-# Name         Type                 Size  Value     
-# --------------------------------------------------
-# dut: 340 ns  timer_t_transaction  -     @1210     
-#   RST        integral             1     'h1       
-#   REQUEST    integral             2     'h0       
-#   ADDRESS    integral             32    'hf014d352
-#   DATA_IN    integral             32    'hde7d71d6
-#   RESPONSE   integral             3     'h0       
-#   DATA_OUT   integral             32    'h0       
-#   P_IRQ      integral             1     'h0       
-# --------------------------------------------------
-# 
-# 
 # ** Info: Correct REQ/ACK sequence observed
 #    Time: 350 ns Started: 340 ns  Scope: top.HDL_DUT_U.abv_timer_module.c_idleResponseToNonReq File: abv/./abv_timer.sv Line: 217
 # UVM_ERROR abv/./abv_timer.sv(183) @ 350 ns: reporter [ABV_TIMER_ASSERT] Assertion pr3 FAILED: OOR Address 0xf014d352 did not trigger OOR response (RESPONSE = 0).
 # UVM_INFO abv/./abv_timer.sv(188) @ 350 ns: reporter [InputSignalNotUnknown] Assertion prUnknown PASSED: DATA_IN and DATA_OUT are always known.
 # UVM_INFO verilog_src/uvm-1.1d/src/base/uvm_objection.svh(1267) @ 360 ns: reporter [TEST_DONE] 'run' phase is ready to proceed to the 'extract' phase
-# UVM_INFO env_lib/./scoreboard.svh(91) @ 360 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [FINAL STATUS] The result for timer VERIFICATION is FAIL, 1/35 , mismatches!
+# UVM_INFO env_lib/./scoreboard.svh(91) @ 360 ns: uvm_test_top.m_timer_t_env_h.m_scoreboard_h [FINAL STATUS] The result for timer VERIFICATION is OK, 0/35 , mismatches!
 # 
 # --- UVM Report Summary ---
 # 
 # ** Report counts by severity
 # UVM_INFO :   39
 # UVM_WARNING :    0
-# UVM_ERROR :    9
+# UVM_ERROR :    8
 # UVM_FATAL :    0
 # ** Report counts by id
 # [ABV_TIMER_ASSERT]    19
-# [Comparison in SCOREBOARD:]     1
 # [FINAL STATUS]     1
 # [InputSignalNotUnknown]    23
 # [Questa UVM]     2
