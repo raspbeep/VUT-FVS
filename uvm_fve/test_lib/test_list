@@ -2,3 +2,4 @@ timer_t_test
 new_timer_t_test
 write_registers_test
 reg_test
+pseudo_random_test

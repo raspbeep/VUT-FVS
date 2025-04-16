@@ -122,7 +122,7 @@ class extended_timer_t_transaction extends timer_t_transaction;
     }
 
     constraint address_alignment {
-        ADDRESS[0] == 0;
+        ADDRESS[1:0] == 2'b00;
     }
 
     constraint enable_implication {

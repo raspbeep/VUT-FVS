@@ -22,7 +22,7 @@ class new_timer_t_test extends timer_t_test_base;
         // creation of sequences
         uvm_sequence_base rst_seq = new_timer_t_sequence_reset::type_id::create( "reset" );
         uvm_sequence_base basic_seq = new_timer_t_sequence_basic::type_id::create( "basic" );
-        uvm_sequence_base rand_seq = new_timer_t_sequence_rand::type_id::create( "rand" );
+        // uvm_sequence_base rand_seq = new_timer_t_sequence_rand::type_id::create( "rand" );
         
         // prevent the phase from immediate termination
         phase.raise_objection( this );
@@ -37,7 +37,7 @@ class new_timer_t_test extends timer_t_test_base;
         rst_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
 
         // stating the random sequence
-        rand_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+        // rand_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
 
         phase.drop_objection( this );
     endtask: run_phase

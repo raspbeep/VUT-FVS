@@ -226,7 +226,13 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
             end
         endcase;
 
-        if (t.REQUEST != CP_REQ_NONE) begin
+        if (t.REQUEST == CP_REQ_NONE) begin
+            response_next_clock = 1;
+            response_next_clock_value = CP_RSP_IDLE;
+        end else if (t.REQUEST == CP_REQ_RESERVED) begin
+            response_next_clock = 1;
+            response_next_clock_value = CP_RSP_ERROR;
+        end else if (t.REQUEST == CP_REQ_READ || t.REQUEST == CP_REQ_WRITE) begin
             if (t.ADDRESS > TIMER_CYCLE_H) begin
                 // out of range access
                 response_next_clock = 1;
@@ -288,10 +294,6 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
                         data_out_next_clock = 1;
                         response_next_clock = 1;
                         response_next_clock_value = CP_RSP_ACK;
-                    end
-                    CP_REQ_RESERVED: begin
-                        response_next_clock = 1;
-                        response_next_clock_value = CP_RSP_ERROR;
                     end
                 endcase;
             end

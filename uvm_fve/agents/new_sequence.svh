@@ -115,29 +115,29 @@ class new_timer_t_sequence_basic extends timer_t_sequence;
 endclass: new_timer_t_sequence_basic
 
 
-class new_timer_t_sequence_rand extends timer_t_sequence;
-    /* INSERT YOUR CODE HERE */
-    // registration of object tools
-    `uvm_object_utils( new_timer_t_sequence_rand )
+// class new_timer_t_sequence_rand extends timer_t_sequence;
+//     /* INSERT YOUR CODE HERE */
+//     // registration of object tools
+//     `uvm_object_utils( new_timer_t_sequence_rand )
 
-    // default constraints for each input interface port
+//     // default constraints for each input interface port
 
-    // Constructor - creates new instance of this class
-	  function new( string name = "new_timer_t_sequence_rand" );
-		    super.new( name );
-	  endfunction: new
+//     // Constructor - creates new instance of this class
+// 	  function new( string name = "new_timer_t_sequence_rand" );
+// 		    super.new( name );
+// 	  endfunction: new
 
-  	// body - implements behavior of the reset sequence (unidirectional)
-  	task body();
-  	  // initialize PRNG
-  	  this.srandom( SEED );
-  	  repeat ( TRANSACTION_COUNT ) begin
-        extended_timer_t_transaction ext_txn;
-        ext_txn = extended_timer_t_transaction::type_id::create("ext_txn");
-  	    if ( !this.randomize() ) begin
-  	      `uvm_error( "body:", "Failed to randomize!" )
-  	    end
-  	    create_and_finish_item();
-  	  end
-  	endtask: body
-endclass: new_timer_t_sequence_rand
+//   	// body - implements behavior of the reset sequence (unidirectional)
+//   	task body();
+//   	  // initialize PRNG
+//   	  this.srandom( SEED );
+//   	  repeat ( TRANSACTION_COUNT ) begin
+//         extended_timer_t_transaction ext_txn;
+//         ext_txn = extended_timer_t_transaction::type_id::create("ext_txn");
+//   	    if ( !this.randomize() ) begin
+//   	      `uvm_error( "body:", "Failed to randomize!" )
+//   	    end
+//   	    create_and_finish_item();
+//   	  end
+//   	endtask: body
+// endclass: new_timer_t_sequence_rand
