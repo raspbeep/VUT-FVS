@@ -33,6 +33,21 @@ class timer_t_sequence extends uvm_sequence #(timer_t_transaction);
         finish_item( item );
     endtask: create_and_finish_item
 
+    protected task automatic create_and_finish_EMPTY_item();
+        seq_item_t item;
+        // create item using the factory
+        item = seq_item_t::type_id::create( "item" );
+        // blocks until the sequencer grants the sequence access to the driver
+        start_item( item );
+        // prepare item to be used (assign default data)
+        item.RST     = ~RST_ACT_LEVEL;
+        item.ADDRESS = 0;
+        item.REQUEST = 0;
+        item.DATA_IN = 0;
+        // block until the driver has completed its side of the transfer protocol
+        finish_item( item );
+    endtask: create_and_finish_EMPTY_item
+
 endclass: timer_t_sequence
 
 // This class represents UVM sequence reseting the DUT/DUV.

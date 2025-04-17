@@ -14,7 +14,7 @@ package sv_param_pkg;
 
     // test parameters
     // how many transaction to generate
-    parameter TRANSACTION_COUNT = 10000;
+    parameter TRANSACTION_COUNT = 100000;
     // initial seed for the PRNG
     parameter SEED = 10162;
 

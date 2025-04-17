@@ -13,5 +13,5 @@ package sv_timer_t_agent_pkg;
     `include "new_sequence.svh"
     `include "write_registers_sequence.svh"
     `include "pseudo_random_sequence.svh"
-    
+    `include "write_registers_unaligned_sequence.svh"
 endpackage: sv_timer_t_agent_pkg

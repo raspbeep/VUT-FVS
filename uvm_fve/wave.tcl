@@ -34,8 +34,8 @@ proc itimer_itf { PATH } {
     add wave -noupdate -hex -color orange -label timer_cnt sv_timer_t_gm_pkg::timer_t_gm::timer_cnt
     add wave -noupdate -hex -color orange -label timer_cmp sv_timer_t_gm_pkg::timer_t_gm::timer_cmp
     add wave -noupdate -hex -color orange -label cycle_cnt sv_timer_t_gm_pkg::timer_t_gm::cycle_cnt
-    add wave -noupdate -hex -color orange -label irq_signal_next_clock sv_timer_t_gm_pkg::timer_t_gm::irq_signal_next_clock
-    add wave -noupdate -hex -color orange -label reset_cnt_next_clock sv_timer_t_gm_pkg::timer_t_gm::reset_cnt_next_clock
+    # add wave -noupdate -hex -color orange -label irq_signal_next_clock sv_timer_t_gm_pkg::timer_t_gm::irq_signal_next_clock
+    # add wave -noupdate -hex -color orange -label reset_cnt_next_clock sv_timer_t_gm_pkg::timer_t_gm::reset_cnt_next_clock
 }
 
 proc customize_gui { TOP_MODULE HDL_DUT } {

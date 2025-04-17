@@ -39,11 +39,11 @@ endproperty
 // counter register is not stable while waiting for IRQ
 sequence checkNotStable;
     // cnt reg is not stable while waiting for IRQ
-    !$stable(cnt_reg_d) throughout (RST === 1 && P_IRQ === 0);
+    !$stable(cnt_reg_d) throughout (RST === RST_ACT_LEVEL && P_IRQ === 0);
 endsequence
 
 // mod nie je disabled
-property pr4;
+property prStable;
     @(posedge CLK) ctrl_reg_d != TIMER_CR_DISABLED |-> checkNotStable;
 endproperty
 
@@ -122,9 +122,12 @@ property clearCntAfterCmpCntMatchAutoRestart;
         |-> ##1 ( cnt_reg_d === 0 );
 endproperty
 
+// does not apply if:
+//      we are changing mode
+//      OR we are writing another value to CNT
 property incCntAfterCmpCntMatchContinuous;
     @(posedge CLK) ((cnt_reg_d === cmp_reg_d) && (ctrl_reg_d === TIMER_CR_CONTINUOUS)
-        && !((REQUEST == CP_REQ_WRITE && DATA_IN != TIMER_CR_DISABLED)) )
+        && !((REQUEST == CP_REQ_WRITE && ADDRESS == TIMER_CR && DATA_IN != TIMER_CR_DISABLED) || (REQUEST == CP_REQ_WRITE && ADDRESS == TIMER_CNT)) )
         |-> ##1 ( cnt_reg_d === $past(cnt_reg_d) + 1 );
 endproperty
 
@@ -135,13 +138,13 @@ property clearCntDisAfterCmpCntMatchOneShot;
 endproperty
 
 property cycleLRead;
-    @(posedge CLK) (ADDRESS === TIMER_CYCLE_L)
+    @(posedge CLK) (ADDRESS === TIMER_CYCLE_L && REQUEST === CP_REQ_READ)
         |-> ##1 (DATA_OUT === cycle_cnt[31:0]);
 endproperty
 
 property cycleHRead;
-    @(posedge CLK) (ADDRESS === TIMER_CYCLE_L)
-        |-> ##1 (DATA_OUT === cycle_cnt[31:0]);
+    @(posedge CLK) (ADDRESS === TIMER_CYCLE_H && REQUEST === CP_REQ_READ)
+        |-> ##1 (DATA_OUT === cycle_cnt[63:32]);
 endproperty
 
 property cycleCntZeroDuringReset;
@@ -154,10 +157,6 @@ endproperty
 // --- Assertions ---
 
 ResetCtrlRegCheck: assert property (pr1)
-    // Pass action block
-    begin
-        `uvm_info("ABV_TIMER_ASSERT", "Assertion pr1 PASSED: ctrl_reg_d reset correctly.", UVM_LOW)
-    end
 else
     // Fail action block
     begin
@@ -165,10 +164,6 @@ else
     end
 
 ResetCycleCntCheck: assert property (pr2)
-    // Pass action block
-    begin
-        `uvm_info("ABV_TIMER_ASSERT", "Assertion pr2 PASSED: cycle_cnt reset correctly.", UVM_LOW)
-    end
 else
     // Fail action block
     begin
@@ -178,27 +173,27 @@ else
 
 // You defined pr3 but didn't assert it, let's add it:
 AddrRangeCheck: assert property (pr3)
-    // Pass action block
-    begin
-        // Use $sformatf for more informative messages
-        `uvm_info("ABV_TIMER_ASSERT", $sformatf("Assertion pr3 PASSED: OOR Address 0x%0h triggered correct response.", ADDRESS), UVM_LOW)
-    end
 else
     // Fail action block
     begin
         `uvm_error("ABV_TIMER_ASSERT", $sformatf("Assertion pr3 FAILED: OOR Address 0x%0h did not trigger OOR response (RESPONSE = %0d).", ADDRESS, RESPONSE))
     end
 
+// SignalsStableWhenNotDisabled: assert property(prStable)
+// else
+//     // Fail action block
+//     begin
+//         // Using fatal as in the original code
+//         `uvm_error("SignalsStableWhenNotUnknown", "Assertion prStable FAILED: Signals stable when mode not disabled.")
+//     end
+
 SignalsDefined: assert property(prUnknown)
-        begin
-            `uvm_info("InputSignalNotUnknown", "Assertion prUnknown PASSED: DATA_IN and DATA_OUT are always known.", UVM_LOW)
-        end
-    else
-        // Fail action block
-        begin
-            // Using fatal as in the original code
-            `uvm_error("InputSignalNotUnknown", "Assertion prUnknown FAILED: DATA_IN and DATA_OUT are unknown.")
-        end
+else
+    // Fail action block
+    begin
+        // Using fatal as in the original code
+        `uvm_error("InputSignalNotUnknown", "Assertion prUnknown FAILED: DATA_IN and DATA_OUT are unknown.")
+    end
 
 // a   prUnknownDataRead
 a_prUnknownDataRead: assert property (prUnknownDataRead) else $error("ACK did not follow REQ within 2 cycles");
@@ -208,44 +203,55 @@ a_prUnknownDataWrite: assert property (prUnknownDataWrite) else $error("ACK did 
 
 // a+c prReadOOR
 a_prReadWriteOOR: assert property (prReadWriteOOR) else $error("ACK did not follow REQ within 2 cycles");
-c_prReadWriteOOR: cover property (prReadWriteOOR) $info("Correct REQ/ACK sequence observed");
+c_prReadWriteOOR: cover property (prReadWriteOOR) $info("Correct REQ/ACK sequence observed"); // Keep cover info
+
 // a+c prReadWriteUnaligned
 a_prReadWriteUnaligned: assert property (prReadWriteUnaligned) else $error("ACK did not follow REQ within 2 cycles");
-c_prReadWriteUnaligned: cover property (prReadWriteUnaligned) $info("Correct REQ/ACK sequence observed");
+c_prReadWriteUnaligned: cover property (prReadWriteUnaligned) $info("Correct REQ/ACK sequence observed"); // Keep cover info
+
 // a+c checkWriteReadSameAddr
 a_checkWriteReadSameAddr: assert property (checkWriteReadSameAddr) else $error("ACK did not follow REQ within 2 cycles");
-c_checkWriteReadSameAddr: cover property (checkWriteReadSameAddr) $info("Correct REQ/ACK sequence observed");
+c_checkWriteReadSameAddr: cover property (checkWriteReadSameAddr) $info("Correct REQ/ACK sequence observed"); // Keep cover info
+
 // a+c ackAfterCorrectAddr
 a_ackAfterCorrectAddr: assert property (ackAfterCorrectAddr) else $error("ACK did not follow REQ within 2 cycles");
-c_ackAfterCorrectAddr: cover property (ackAfterCorrectAddr) $info("Correct REQ/ACK sequence observed");
+c_ackAfterCorrectAddr: cover property (ackAfterCorrectAddr) $info("Correct REQ/ACK sequence observed"); // Keep cover info
+
 // a+c idleResponseToNonReq
 a_idleResponseToNonReq: assert property (idleResponseToNonReq) else $error("ACK did not follow REQ within 2 cycles");
-c_idleResponseToNonReq: cover property (idleResponseToNonReq) $info("Correct REQ/ACK sequence observed");
+c_idleResponseToNonReq: cover property (idleResponseToNonReq) $info("Correct REQ/ACK sequence observed"); // Keep cover info
 
+a_errorResponseToResReq: assert property (errorResponseToResReq) else $error("ACK did not follow REQ within 2 cycles");
 // a   noWaitResponse
 a_noWaitResponse: assert property (noWaitResponse) else $error("ACK did not follow REQ within 2 cycles");
 
 // a+c irqAfterCmpCntMatch
 a_irqAfterCmpCntMatch: assert property (irqAfterCmpCntMatch) else $error("ACK did not follow REQ within 2 cycles");
-c_irqAfterCmpCntMatch: cover property (irqAfterCmpCntMatch) $info("Correct REQ/ACK sequence observed");
+c_irqAfterCmpCntMatch: cover property (irqAfterCmpCntMatch) $info("Correct REQ/ACK sequence observed"); // Keep cover info
+
 // a+c clearCntAfterCmpCntMatchAutoRestart
 a_clearCntAfterCmpCntMatchAutoRestart: assert property (clearCntAfterCmpCntMatchAutoRestart) else $error("ACK did not follow REQ within 2 cycles");
-c_clearCntAfterCmpCntMatchAutoRestart: cover property (clearCntAfterCmpCntMatchAutoRestart) $info("Correct REQ/ACK sequence observed");
+c_clearCntAfterCmpCntMatchAutoRestart: cover property (clearCntAfterCmpCntMatchAutoRestart) $info("Correct REQ/ACK sequence observed"); // Keep cover info
+
 // a+c incCntAfterCmpCntMatchContinuous
 a_incCntAfterCmpCntMatchContinuous: assert property (incCntAfterCmpCntMatchContinuous) else $error("ACK did not follow REQ within 2 cycles");
-c_incCntAfterCmpCntMatchContinuous: cover property (incCntAfterCmpCntMatchContinuous) $info("Correct REQ/ACK sequence observed");
+c_incCntAfterCmpCntMatchContinuous: cover property (incCntAfterCmpCntMatchContinuous) $info("Correct REQ/ACK sequence observed"); // Keep cover info
+
 // a+c clearCntDisAfterCmpCntMatchOneShot
 a_clearCntDisAfterCmpCntMatchOneShot: assert property (clearCntDisAfterCmpCntMatchOneShot) else $error("ACK did not follow REQ within 2 cycles");
-c_clearCntDisAfterCmpCntMatchOneShot: cover property (clearCntDisAfterCmpCntMatchOneShot) $info("Correct REQ/ACK sequence observed");
+c_clearCntDisAfterCmpCntMatchOneShot: cover property (clearCntDisAfterCmpCntMatchOneShot) $info("Correct REQ/ACK sequence observed"); // Keep cover info
+
 // a+c cycleLRead
 a_cycleLRead: assert property (cycleLRead) else $error("ACK did not follow REQ within 2 cycles");
-c_cycleLRead: cover property (cycleLRead) $info("Correct REQ/ACK sequence observed");
+c_cycleLRead: cover property (cycleLRead) $info("Correct REQ/ACK sequence observed"); // Keep cover info
+
 // a+c cycleHRead
 a_cycleHRead: assert property (cycleHRead) else $error("ACK did not follow REQ within 2 cycles");
-c_cycleHRead: cover property (cycleHRead) $info("Correct REQ/ACK sequence observed");
+c_cycleHRead: cover property (cycleHRead) $info("Correct REQ/ACK sequence observed"); // Keep cover info
+
 // a+c cycleCntZeroDuringReset
 a_cycleCntZeroDuringReset: assert property (cycleCntZeroDuringReset) else $error("ACK did not follow REQ within 2 cycles");
-c_cycleCntZeroDuringReset: cover property (cycleCntZeroDuringReset) $info("Correct REQ/ACK sequence observed");
+c_cycleCntZeroDuringReset: cover property (cycleCntZeroDuringReset) $info("Correct REQ/ACK sequence observed"); // Keep cover info
 
 
 endmodule : abv_timer

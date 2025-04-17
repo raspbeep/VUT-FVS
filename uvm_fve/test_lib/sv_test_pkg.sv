@@ -10,7 +10,8 @@ package sv_timer_t_test_pkg;
     `include "test_base.svh"
     `include "test.svh"
     `include "new_test.svh"
-    `include "write_registers_test.svh"
     `include "reg_test.svh"
     `include "pseudo_random_test.svh"
+    `include "write_registers_test.svh"
+    `include "write_registers_unaligned_test.svh"
 endpackage: sv_timer_t_test_pkg
