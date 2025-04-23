@@ -110,13 +110,43 @@ class new_timer_t_sequence_basic extends timer_t_sequence;
         create_and_finish_item();
         create_and_finish_item();
 
+        default_ADDRESS = 32'h17;
+        default_REQUEST = CP_REQ_WRITE;
+        default_DATA_IN = TIMER_CR_CONTINUOUS;
+        create_and_finish_item();
+        create_and_finish_EMPTY_item();
+        create_and_finish_EMPTY_item();
+        create_and_finish_EMPTY_item();
+        create_and_finish_EMPTY_item();
+
+        default_ADDRESS = TIMER_CR;
+        default_REQUEST = CP_REQ_WRITE;
+        default_DATA_IN = TIMER_CR_CONTINUOUS;
+        create_and_finish_item();
+
+        default_ADDRESS = TIMER_CR;
+        default_REQUEST = CP_REQ_READ;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+
+        create_and_finish_EMPTY_item();
+        create_and_finish_EMPTY_item();
+        create_and_finish_EMPTY_item();
     endtask: body
 
 endclass: new_timer_t_sequence_basic
 
 
+class random1_timer_t_sequence extends uvm_sequence #(extended1_timer_t_transaction);
+    `uvm_object_utils( random1_timer_t_sequence )
+
+    // Constructor
+    function new( string name = "random1_timer_t_sequence" );
+        super.new( name );
+    endfunction: new
+endclass: random1_timer_t_sequence
+
 // class new_timer_t_sequence_rand extends timer_t_sequence;
-//     /* INSERT YOUR CODE HERE */
 //     // registration of object tools
 //     `uvm_object_utils( new_timer_t_sequence_rand )
 
@@ -131,9 +161,9 @@ endclass: new_timer_t_sequence_basic
 //   	task body();
 //   	  // initialize PRNG
 //   	  this.srandom( SEED );
-//   	  repeat ( TRANSACTION_COUNT ) begin
-//         extended_timer_t_transaction ext_txn;
-//         ext_txn = extended_timer_t_transaction::type_id::create("ext_txn");
+//   	  repeat ( TRANSACTION_COUNT1 ) begin
+//         extended1_timer_t_transaction ext_txn;
+//         ext_txn = extended1_timer_t_transaction::type_id::create("ext_txn");
 //   	    if ( !this.randomize() ) begin
 //   	      `uvm_error( "body:", "Failed to randomize!" )
 //   	    end
@@ -141,3 +171,29 @@ endclass: new_timer_t_sequence_basic
 //   	  end
 //   	endtask: body
 // endclass: new_timer_t_sequence_rand
+
+class new_timer_t_sequence_rand extends random1_timer_t_sequence;
+    `uvm_object_utils( new_timer_t_sequence_rand )
+
+    function new( string name = "new_timer_t_sequence_rand" );
+        super.new( name );
+        this.srandom( SEED );
+    endfunction: new
+
+    task body();
+        REQ item;
+        repeat ( TRANSACTION_COUNT1 ) begin
+            item = extended1_timer_t_transaction::type_id::create("item");
+
+            start_item(item);
+
+            if ( !item.randomize() ) begin
+                `uvm_error( get_type_name(), "Failed to randomize transaction item!" )
+            end else begin
+                 `uvm_info(get_type_name(), $sformatf("Randomized item:\n%s", item.sprint()), UVM_HIGH)
+            end
+
+            finish_item(item);
+        end
+    endtask: body
+endclass: new_timer_t_sequence_rand

@@ -29,7 +29,7 @@ def merge_sv_files(input_dir, output_file):
                 # Sort files for consistent order (optional but good practice)
                 files.sort()
                 for filename in files:
-                    if filename.endswith((".sv", ".svh")):
+                    if filename.endswith((".sv", ".svh", ".tcl")):
                         file_path = os.path.join(root, filename)
                         relative_path = os.path.relpath(file_path, input_dir)
                         print(f"  Adding: {relative_path}")

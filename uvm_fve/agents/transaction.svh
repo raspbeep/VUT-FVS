@@ -121,8 +121,9 @@ class extended_timer_t_transaction extends timer_t_transaction;
         burst_length inside {[1:16]};
     }
 
-    constraint address_alignment {
+    constraint address_constraint {
         ADDRESS[1:0] == 2'b00;
+        ADDRESS[31:0] < 32'h17;
     }
 
     constraint enable_implication {
@@ -130,7 +131,7 @@ class extended_timer_t_transaction extends timer_t_transaction;
     }
 
     constraint valid_request {
-        REQUEST inside {[1:3]};
+        REQUEST inside {[0:3]};
     }
 
     function void do_copy(uvm_object rhs);
@@ -184,3 +185,98 @@ class extended_timer_t_transaction extends timer_t_transaction;
     endfunction: do_record
 
 endclass : extended_timer_t_transaction
+
+
+// Extended transaction class
+class extended1_timer_t_transaction extends timer_t_transaction;
+
+    `uvm_object_utils(extended1_timer_t_transaction)
+
+    // New random variable
+    rand logic enable;
+
+    // New variable for burst length
+    rand int burst_length;
+
+    // Constructor
+    function new(string name = "extended1_timer_t_transaction");
+        super.new(name);
+    endfunction : new
+
+    constraint rst_inactive {
+        RST == ~RST_ACT_LEVEL;
+    }
+
+    constraint valid_request {
+        REQUEST inside {CP_REQ_NONE, CP_REQ_READ, CP_REQ_WRITE, CP_REQ_RESERVED};
+    }
+
+    constraint valid_address {
+        ADDRESS inside {
+            TIMER_CNT, TIMER_CMP, TIMER_CR, TIMER_CYCLE_L, TIMER_CYCLE_H
+        };
+    }
+
+    constraint data_in_for_mode_change {
+    // (REQUEST == CP_REQ_WRITE && ADDRESS == TIMER_CR) ->
+    //     DATA_IN dist {
+    //         TIMER_CR_DISABLED     := 1,
+    //         TIMER_CR_AUTO_RESTART := 1,
+    //         TIMER_CR_ONESHOT      := 1,
+    //         TIMER_CR_CONTINUOUS   := 1
+    //     };
+        // Alternative using 'inside':
+        DATA_IN inside {TIMER_CR_DISABLED, TIMER_CR_AUTO_RESTART, TIMER_CR_ONESHOT, TIMER_CR_CONTINUOUS};
+    }
+
+    function void do_copy(uvm_object rhs);
+        extended1_timer_t_transaction rhs_;
+        if (!$cast(rhs_, rhs)) begin
+        `uvm_fatal("do_copy:", "Failed to cast transaction object.")
+        return;
+        end
+        super.do_copy(rhs);
+        enable = rhs_.enable;
+        burst_length = rhs_.burst_length;
+    endfunction : do_copy
+
+    function string convert2string();
+        string s;
+        s = $sformatf( "%s\n\tRST: 'h%0h\n\tP_IRQ: 'h%0h\n\tADDRESS: 'h%0h\n\tREQUEST: 'h%0h\n\tRESPONSE: 'h%0h\n\tDATA_OUT: 'h%0h\n\tDATA_IN: 'h%0h",
+            super.convert2string(),
+            RST,
+            P_IRQ,
+            ADDRESS,
+            REQUEST,
+            RESPONSE,
+            DATA_OUT,
+            DATA_IN );
+        return s;
+    endfunction: convert2string
+
+    function void do_print(uvm_printer printer);
+        super.do_print(printer);
+        if ( printer != null ) begin
+            printer.print_int( "RST", RST, $bits(RST) );
+            printer.print_int( "REQUEST", REQUEST, $bits(REQUEST) );
+            printer.print_int( "ADDRESS", ADDRESS, $bits(ADDRESS) );
+            printer.print_int( "DATA_IN", DATA_IN, $bits(DATA_IN) );
+            printer.print_int( "RESPONSE", RESPONSE, $bits(RESPONSE) );
+            printer.print_int( "DATA_OUT", DATA_OUT, $bits(DATA_OUT) );
+            printer.print_int( "P_IRQ", P_IRQ, $bits(P_IRQ) );
+        end
+    endfunction : do_print
+
+    // Override the do_record function to include the new variables
+    function void do_record( uvm_recorder recorder );
+        super.do_record( recorder );
+        `uvm_record_field( "RST", RST )
+        `uvm_record_field( "P_IRQ", P_IRQ )
+        `uvm_record_field( "ADDRESS", ADDRESS )
+        `uvm_record_field( "REQUEST", REQUEST )
+        `uvm_record_field( "RESPONSE", RESPONSE )
+        `uvm_record_field( "DATA_OUT", DATA_OUT )
+        `uvm_record_field( "DATA_IN", DATA_IN )
+    endfunction: do_record
+
+endclass : extended1_timer_t_transaction

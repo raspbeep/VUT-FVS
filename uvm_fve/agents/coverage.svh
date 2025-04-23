@@ -29,9 +29,8 @@ class timer_t_coverage extends uvm_subscriber #(timer_t_transaction);
         }
 
         // 3 Coverpoint a biny pro hodnoty 0 a 1 signálu reset.
-        reset: coverpoint m_transaction_h.RST {
-            bins active = { 0 };
-            bins inactive = { 1 };
+        reset_inactive: coverpoint m_transaction_h.RST {
+            bins inactive = { ~RST_ACT_LEVEL };
         }
 
         // 4 Transition coverpoint pro přechody na signálu reset: 0->1, 1->0. Každý přechod musí nastat alespoň 5x.
@@ -42,18 +41,22 @@ class timer_t_coverage extends uvm_subscriber #(timer_t_transaction);
 
         // 5 Coverpoint a biny pro adresy 8'h0, 8'h4, 8'h8, 8'h10, 8'h14. Váha 0 (pomocný coverpoint pro cross). 
         addresses: coverpoint m_transaction_h.ADDRESS {
-            bins all_modes[] = { TIMER_CNT, TIMER_CMP, TIMER_CR, TIMER_CYCLE_L, TIMER_CYCLE_H };
+            bins addr_cnt   = { TIMER_CNT };
+            bins addr_cmp   = { TIMER_CMP };
+            bins addr_cr    = { TIMER_CR };
+            bins addr_cl_l  = { TIMER_CYCLE_L };
+            bins addr_cl_h  = { TIMER_CYCLE_H };
             option.weight = 0;
         }
 
         // 6 Cross coverpoint všech adres (můžete použít coverpoint z 5.), operace write, a neaktivního resetu (můžete použít coverpoint z 3. a omezit se na neaktivní reset).
-        cv6: cross request, reset, addresses {
-            bins all_addr_write_no_rst = binsof(addresses) && binsof(reset.inactive) && binsof(request.req_write);
+        cv6: cross request, reset_inactive, addresses {
+            bins all_addr_write_no_rst = binsof(addresses) && binsof(reset_inactive) && binsof(request.req_write);
         }
 
         // 7 Cross coverpoint všech adres (můžete použít coverpoint z 5.), operace read, a neaktivního resetu (můžete použít coverpoint z 3. a omezit se na neaktivní reset).
-        cv7: cross request, reset, addresses {
-            bins all_addr_write_no_rst = binsof(addresses) && binsof(reset.inactive) && binsof(request.req_read);
+        cv7: cross request, reset_inactive, addresses {
+            bins all_addr_write_no_rst = binsof(addresses) && binsof(reset_inactive) && binsof(request.req_read);
         }
 
         // 8 Coverpoint a biny pro hodnoty 0 a 1 signálu přerušení.
@@ -85,8 +88,8 @@ class timer_t_coverage extends uvm_subscriber #(timer_t_transaction);
         // 12 Cross coverpoint všech adres, všech operací kromě RESERVED (můžete použít coverpoint z 2.),
         // neaktivního resetu (můžete použít coverpoint z 3. a omezit se na neaktivní reset), a všech módů
         // (můžete použít coverpoint z 1).
-        cv12: cross addresses, request, reset, modes {
-            bins all = binsof(addresses) && binsof(request) && binsof(reset.inactive) && binsof(modes);
+        cv12: cross addresses, request, reset_inactive, modes {
+            bins all = binsof(addresses) && binsof(request) && binsof(reset_inactive) && binsof(modes);
         }
 
     endgroup

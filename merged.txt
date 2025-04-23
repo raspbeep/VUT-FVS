@@ -1,0 +1,3283 @@
+// ---- File: uvm_fve/compile.tcl ----
+source "./start_common.tcl"
+
+# compile SystemVerilog source file(s)
+proc compile_fve_source { LIBRARY SRC_FILES } {
+    #foreach SRC_FILE $SRC_FILES {
+    #    regsub "/\[^/\]+\$" $SRC_FILE "/" INC_DIR
+    #    set COMPILE_CMD "vlog -sv -incr -source -timescale \"1ps/1ps\" -work $LIBRARY +incdir+$INC_DIR $SRC_FILE"
+    #    eval $COMPILE_CMD
+    #}
+    set COMPILE_CMD "vlog -sv -incr -source -timescale \"1ps/1ps\" -work ${LIBRARY} ${SRC_FILES}"
+    eval ${COMPILE_CMD}
+}
+
+# compile VHDL RTL source file(s)
+proc compile_vhdl { LIBRARY SRC_FILES } {
+    global CODE_COVERAGE_FLAGS
+    # VHDL 2008 is required for testbench compilation only, RTL is compliant with 1993 standard
+    set COMPILE_CMD "vcom -explicit -2008 -source ${CODE_COVERAGE_FLAGS} -work ${LIBRARY} ${SRC_FILES}"
+    eval "${COMPILE_CMD} -just pe"
+    eval "${COMPILE_CMD} -skip pec"
+    eval "${COMPILE_CMD} -just c"
+}
+
+# compile Verilog RTL source file(s)
+proc compile_verilog { LIBRARY SRC_FILES } {
+    global CODE_COVERAGE_FLAGS
+    set COMPILE_CMD "vlog -incr -source ${CODE_COVERAGE_FLAGS} -timescale \"1ps/1ps\" -work ${LIBRARY} ${SRC_FILES}"
+    eval ${COMPILE_CMD}
+}
+
+# compile SystemVerilog RTL source file(s)
+proc compile_sverilog { LIBRARY SRC_FILES } {
+    global CODE_COVERAGE_FLAGS
+    set COMPILE_CMD "vlog -sv -sv12compat -incr -source ${CODE_COVERAGE_FLAGS} -timescale \"1ps/1ps\" -work ${LIBRARY} ${SRC_FILES}"
+    eval ${COMPILE_CMD}
+}
+
+proc compile_cnd { LIBRARY SRC_FILES CMD HDL_EXT } {
+    set FILES [filter_extensions ${SRC_FILES} ${HDL_EXT}]
+    if { [llength ${FILES}] } {
+        eval "${CMD} {${LIBRARY}} {${FILES}}"
+    }
+}
+
+# compile all RTL source files in given directory and its sub-directories
+proc compile_rtl_directory { LIBRARY HDL_DIRECTORY } {
+    set SRC_FILES [get_file_list ${HDL_DIRECTORY} ""]
+
+    compile_cnd ${LIBRARY} ${SRC_FILES} compile_vhdl vhd
+    compile_cnd ${LIBRARY} ${SRC_FILES} compile_verilog v
+    compile_cnd ${LIBRARY} ${SRC_FILES} compile_sverilog sv
+}
+
+# create working library and compile source files
+proc compile_sources { LIBRARY HDL_DIRECTORY } {
+    # backup previous error message and set new one
+    global ERROR_MESSAGE
+    quietly set prev_error_msg ERROR_MESSAGE
+    quietly set ERROR_MESSAGE "Compilation error has been encountered."
+
+    # create working library
+    vlib $LIBRARY
+
+    # DUT compilation
+    #compile_directory $LIBRARY $HDL_DIRECTORY
+    #eval "vcom -explicit -93 -source +cover=sbcef -nowarn 13 -work $LIBRARY $HDL_DIRECTORY/timer_fvs.vhd"
+    quietly set CODE_COVERAGE_FLAGS "+cover=sbcef -nowarn 13"
+
+    set SRC_FILES [list \
+      [file join .. rtl . timer_fvs.vhd]
+    ]
+
+    compile_vhdl ${LIBRARY} ${SRC_FILES}
+
+    # Can't use this because of dependencies in RTL
+    # compile_rtl_directory ${LIBRARY} ${HDL_DIRECTORY}
+
+    # verification environment compilation
+    set SRC_FILES [list \
+      test_parameters.sv  \
+      [file join agents . sv_agent_pkg.sv]  \
+      [file join golden_model sv_golden_model_pkg.sv] \
+      [file join env_lib . sv_env_pkg.sv] \
+      [file join test_lib . sv_test_pkg.sv] \
+      [file join agents . ifc.sv] \
+      [file join abv . abv_timer.sv] \
+      [file join regmodel . registers_pkg.sv] \
+      top_level.sv  \
+    ]
+
+    # compile all sources at once
+    compile_fve_source ${LIBRARY} ${SRC_FILES}
+    # restore previous error message
+    quietly set ERROR_MESSAGE prev_error_msg
+}
+
+
+// ---- File: uvm_fve/start.tcl ----
+package require cmdline
+
+source "./compile.tcl"
+source "./start_common.tcl"
+
+# parse script arguments
+# updates global variables when configured from cmdline
+proc parse_arguments { ARGV } {
+    # make global variables available
+    global UVM_TESTNAME
+    global UVM_TESTS_FILE
+    global RUN_MULTIPLE_TESTS
+
+    # prepare variables necessary for the cmdline package
+    set USAGE "do start.tcl -uvm_testname uvm_class_name -uvm_tests_file path_to_tests_file -run_multiple_tests"
+    set PARAMETERS {
+        { "uvm_testname.arg" "" "Specify which UVM test to execute (optional)" }
+        { "uvm_tests_file.arg" "" "Specify location of the file with list of test names (optional)" }
+        { "run_multiple_tests" "Run all tests specified in file with list of test names (optional)" }
+    }
+    array set ARGUMENTS [::cmdline::getoptions ARGV ${PARAMETERS} ${USAGE}]
+    if { [string length $ARGUMENTS(uvm_testname)] > 0 } {
+        if { [string index $ARGUMENTS(uvm_testname) 0] == "-" } {
+            run_on_error "Error: Specification of test name is required \nUsage: ${USAGE}"
+        }
+        set UVM_TESTNAME $ARGUMENTS(uvm_testname)
+    }
+    if { [string length $ARGUMENTS(uvm_tests_file)] > 0 } {
+        if { [string index $ARGUMENTS(uvm_tests_file) 0] == "-" } {
+            run_on_error "Error: Specification of path to file with list of tests is required \nUsage: ${USAGE}"
+        }
+        set UVM_TESTS_FILE $ARGUMENTS(uvm_tests_file)
+    }
+    if { $ARGUMENTS(run_multiple_tests) == 1} {
+        set RUN_MULTIPLE_TESTS $ARGUMENTS(run_multiple_tests)
+    }
+}
+
+# run single simulation
+proc run_program { VSIM_RUN_CMD UVM_TESTNAME COVERAGE_FILE} {
+    global ERROR_MESSAGE
+    global UCDB_DIR
+    quietly set ERROR_MESSAGE "Error occured while running test ${UVM_TESTNAME}"
+    # specify UVM test to run
+    append VSIM_RUN_CMD " +UVM_TESTNAME=${UVM_TESTNAME}"
+
+    # start of the simulation
+    eval ${VSIM_RUN_CMD}
+
+    suppress_warnings
+    # set variables to run multiple programs
+    onbreak resume
+    onfinish stop
+
+    # Disable logging
+    # nolog -all
+
+    # definition of signals in a wave window and complete GUI customization
+    if { ![batch_mode] } {
+        source "./wave.tcl"
+        global DUT_MODULE
+        global HDL_DUT
+        customize_gui /$DUT_MODULE /$HDL_DUT
+    }
+
+    # run the simulation
+    run -all
+    # save coverage from current run
+    save_coverage ./${UCDB_DIR}/${COVERAGE_FILE}
+}
+
+# quit any previous simulation
+quit -sim
+
+# prepare script arguments for the cmdline package
+set DO_ARGS ""
+while { $argc != 0 } {
+    set DO_ARGS [concat ${DO_ARGS} ${1}]
+    shift
+}
+
+#puts "before parsing"
+#puts "uvm testname ${UVM_TESTNAME}"
+#puts "uvm list of test names file ${UVM_TESTS_FILE}"
+#puts "run multiple tests? ${RUN_MULTIPLE_TESTS}"
+
+#puts "passed arguments ${DO_ARGS}"
+# parse script arguments
+quietly set ERROR_MESSAGE "Error occured while parsing arguments"
+parse_arguments ${DO_ARGS}
+clear_transcript_file
+if { ![batch_mode] } {
+    .main clear
+}
+
+#puts "after parsing"
+#puts "uvm testname ${UVM_TESTNAME}"
+#puts "uvm list of test names file ${UVM_TESTS_FILE}"
+#puts "run multiple tests? ${RUN_MULTIPLE_TESTS}"
+
+# compile HDL and HVL source files
+compile_sources $WORKING_LIBRARY $HDL_DIRECTORY
+
+if { ${RUN_MULTIPLE_TESTS} } {
+    # check if path to file with tests is set
+    if { [string length ${UVM_TESTS_FILE}] > 0} {
+        # check if set file exists
+        if { [file isfile ${UVM_TESTS_FILE}]} {
+            set TESTS_RUN 0
+            file mkdir ${UCDB_DIR}
+            set fp [open ${UVM_TESTS_FILE} r]
+            while { [gets $fp uvm_test] >= 0 } {
+                if { [string length ${uvm_test}] > 0 } {
+                    set TESTS_RUN 1
+                    run_program [subst ${VSIM_RUN_CMD}] ${uvm_test} ${uvm_test}.ucdb
+                    # quit any previous simulation
+                    quit -sim
+                }
+            }
+            close $fp
+            if { [file exists ${VSIM_COV_MERGE_FILE}] } {
+                file delete ${VSIM_COV_MERGE_FILE}
+            }
+            if {${TESTS_RUN}} {
+                eval ${VSIM_COVERAGE_MERGE}
+            }
+        } else {
+            run_on_error "Error: Input file '${UVM_TESTS_FILE}' does not exist"
+        }
+    } else {
+        run_on_error "Error: Path to file with list of test names is required, see\
+        parameter -uvm_tests_file usage"
+    }
+
+} else {
+    if { [string length ${UVM_TESTNAME}] > 0} {
+        file mkdir ${UCDB_DIR}
+        run_program [subst ${VSIM_RUN_CMD}] ${UVM_TESTNAME} ${UVM_TESTNAME}.ucdb
+    } else {
+        run_on_error "Error: UVM testname has to be specified"
+    }
+}
+
+if [batch_mode] {
+    quit -f
+} else {
+    pause
+}
+
+
+// ---- File: uvm_fve/start_common.tcl ----
+####################################################################################################
+#
+####################################################################################################
+
+# define behavior when an error is encountered
+proc run_on_error { ERROR_MESSAGE } {
+    # generate error messages and quit
+    echo "${ERROR_MESSAGE}"
+    if [batch_mode] {
+    quit -f
+    } else {
+    pause
+    }
+}
+
+# save coverage into database file
+proc save_coverage { COVERAGE_FILE } {
+    global CODE_COVERAGE_ENABLED
+    global FUNC_COVERAGE_ENABLED
+
+    # Check if *any* coverage type was intended to be enabled.
+    # The actual types saved depend on compile/simulation flags,
+    # not options to the 'coverage save' command itself in Questa.
+    if { [info exists CODE_COVERAGE_ENABLED] && ${CODE_COVERAGE_ENABLED} || \
+         [info exists FUNC_COVERAGE_ENABLED] && ${FUNC_COVERAGE_ENABLED} } {
+
+        # Recommend using the standard .ucdb extension
+        if { ![string match "*.ucdb" $COVERAGE_FILE] } {
+            puts "Warning: Coverage file '$COVERAGE_FILE' does not end with .ucdb. Recommend using the .ucdb extension for Questa."
+            # Optionally force the extension:
+            # set COVERAGE_FILE "${COVERAGE_FILE}.ucdb"
+        }
+
+        # Construct the Questa command (simple)
+        set cmd [list coverage save $COVERAGE_FILE]
+        puts "Executing coverage save command: $cmd"
+
+        # Execute and catch errors
+        # Use 'uplevel #0' if running this proc from another proc context
+        # Use plain execution if running directly in vsim Tcl console/do script
+        if { [catch { uplevel #0 $cmd } result] } {
+            puts stderr "Error saving coverage to ${COVERAGE_FILE}: $result"
+            # Return an error code or re-throw
+            return -code error "Coverage save failed"
+        } else {
+            puts "Coverage data saved successfully to ${COVERAGE_FILE}"
+            puts "Ensure simulation was run with 'vsim -coverage' and code compiled with '+cover=...' for data to be present."
+        }
+    } else {
+        puts "Coverage saving skipped (CODE_COVERAGE_ENABLED and FUNC_COVERAGE_ENABLED are both false or not defined)."
+    }
+}
+# suppress warnings from arithmetic library during reset
+proc suppress_warnings {} {
+    quietly set NumericStdNoWarnings 1;
+    quietly set StdArithNoWarnings 1;
+    if { [find signals /top/RST] != "" } {
+        when -fast -label disable_StdWarn {/top/RST == 0} {
+            quietly set NumericStdNoWarnings 1;
+            quietly set StdArithNoWarnings 1;
+        }
+        when -fast -label enable_StdWarn {/top/RST == 1} {
+            quietly set NumericStdNoWarnings 0;
+            quietly set StdArithNoWarnings 0;
+        }
+    }
+}
+
+# reduce and limit size of the transcript file
+proc clear_transcript_file {} {
+    transcript file ""
+    transcript file transcript
+    # limit size of the transcript to 1 GB
+    transcript sizelimit 1048576
+}
+
+# Return list of files with given extension only
+proc filter_extensions { FILES EXT } {
+    return [lsearch -inline -all -regexp ${FILES} [subst -nocommands -nobackslashes {^.*\.${EXT}$}]]
+}
+
+proc get_file_list { DIRECTORY EXT {RECURSIVE "1"} } {
+    set FILES [lsort -dictionary [glob -nocomplain -types {f r} -directory ${DIRECTORY} -- *${EXT}]]
+    if { ${RECURSIVE} } {
+        foreach DIR [glob -nocomplain -types {d} -directory ${DIRECTORY} *] {
+            set FILES [concat [get_file_list ${DIR} ${EXT}] ${FILES}]
+        }
+    }
+    return ${FILES}
+}
+
+# global variables
+# working library name
+quietly set WORKING_LIBRARY "work"
+# default directory with HDL source files of the DUT
+quietly set HDL_DIRECTORY [file join .. rtl]
+quietly set ERROR_MESSAGE "An unspecified error has been encountered."
+# set path to top level and DUT instance
+quietly set TOP_MODULE "top"
+quietly set DUT_MODULE "$TOP_MODULE/dut"
+quietly set HDL_DUT "$DUT_MODULE/HDL_DUT_U"
+
+quietly set UCDB_DIR "ucdb"
+# input parameters for start.tcl script
+# set UVM_TESTNAME
+quietly set UVM_TESTNAME "timer_t_test"
+# set UVM_TESTS_FILE
+quietly set UVM_TESTS_FILE "./test_lib/test_list"
+# set RUN_MULTIPLE_TESTS
+quietly set RUN_MULTIPLE_TESTS 0
+
+# enable or disable functional coverage collection
+quietly set FUNC_COVERAGE_ENABLED 1
+# enable or disable code coverage collection
+quietly set CODE_COVERAGE_ENABLED 1
+
+# prepare command to start simulation
+#quietly set VSIM_RUN_CMD "vsim -voptargs=\"+acc=rn\" -msgmode both -assertcover -coverage -t 1ps -lib ${WORKING_LIBRARY} ${TOP_MODULE}"
+#quietly set VSIM_RUN_CMD "vsim -voptargs=\"+acc=rn\" -msgmode both -coverage -t 1ps -lib ${WORKING_LIBRARY} ${TOP_MODULE}"
+quietly set VSIM_RUN_CMD "vsim -voptargs=\"+acc=arn\" -msgmode both -assertdebug -t 1ps -lib ${WORKING_LIBRARY} ${TOP_MODULE}"
+quietly set VSIM_COV_MERGE_FILE "./${UCDB_DIR}/final.ucdb"
+quietly set VSIM_COVERAGE_MERGE "vcover merge -64 ${VSIM_COV_MERGE_FILE} ./${UCDB_DIR}/*.ucdb"
+
+# default action when an error is encountered
+onElabError { run_on_error ${::errorInfo} ${ERROR_MESSAGE}; }
+onerror { run_on_error ${ERROR_MESSAGE}; }
+
+
+// ---- File: uvm_fve/test_parameters.sv ----
+package sv_param_pkg;
+    import uvm_pkg::*;
+
+    `include "uvm_macros.svh"
+
+    // clocks and resets
+    parameter CLK_PERIOD = 10ns;
+
+    // generic parameters
+    parameter logic RST_ACT_LEVEL = 1'b0;
+    parameter DATA_WIDTH = 32;
+    parameter ADDR_WIDTH = 32;
+    parameter TIMER_ADDR_SPACE_BITS = 8;
+
+    // test parameters
+    // how many transaction to generate
+    parameter TRANSACTION_COUNT  = 10000;
+    parameter TRANSACTION_COUNT1 = 10000;
+    // parameter TRANSACTION_COUNT = 100;
+    // initial seed for the PRNG
+    parameter SEED = 10162;
+
+    // REQUEST CONSTANTS
+    typedef enum bit [1:0]
+    {
+        CP_REQ_NONE = 2'b00,
+        CP_REQ_READ = 2'b01,
+        CP_REQ_WRITE = 2'b10,
+        CP_REQ_RESERVED = 2'b11
+    } request_codes_e;
+
+        // RESPONSE CONSTANTS
+    typedef enum bit [2:0]
+    {
+        CP_RSP_IDLE = 3'b000,
+        CP_RSP_ACK = 3'b001,
+        CP_RSP_WAIT = 3'b010,
+        CP_RSP_ERROR = 3'b011,
+        CP_RSP_UNALIGNED = 3'b100,
+        CP_RSP_OOR = 3'b101
+    } response_codes_e;
+
+    // timer register addresses
+    // register addresses
+    typedef enum bit [7:0]
+    {
+        TIMER_CNT = 8'h00,
+        TIMER_CMP  = 8'h04,
+        TIMER_CR = 8'h08,
+        TIMER_CYCLE_L = 8'h10,
+        TIMER_CYCLE_H = 8'h14
+    } reg_address_codes_e;
+
+    typedef enum bit [1:0]
+    {
+        TIMER_CR_DISABLED = 2'b00,
+        TIMER_CR_AUTO_RESTART = 2'b01,
+        TIMER_CR_ONESHOT = 2'b10,
+        TIMER_CR_CONTINUOUS = 2'b11
+    } timer_cr_mode_e;
+
+endpackage: sv_param_pkg
+
+
+// ---- File: uvm_fve/top_level.sv ----
+// The topmost encapsulation level of the verification
+module top;
+
+    import uvm_pkg::*;
+    import sv_param_pkg::*;
+    import sv_timer_t_agent_pkg::*;
+    import sv_timer_t_env_pkg::*;
+    import sv_timer_t_test_pkg::*;
+    import registers_pkg::*;
+
+    // Global clock signal definition
+    logic CLK;
+
+    // clock generation
+    initial begin
+        CLK <= 'b0;
+        #(CLK_PERIOD/2) forever #(CLK_PERIOD/2) CLK = ~CLK;
+    end
+
+    // customize the default printer
+    initial begin
+        automatic uvm_table_printer printer = new;
+        printer.knobs.begin_elements = -1;
+        printer.knobs.value_width = -1;
+        uvm_default_printer = printer;
+        $timeformat(-9, 0, " ns", 8);
+    end
+
+    // Virtual interface
+    // bind of clock to virtual interface signal
+    itimer_itf timer_t_if( CLK );
+
+    // DUT instance
+    // design we verify
+    timer #(
+        .TIMER_ADDR_SPACE_BITS(TIMER_ADDR_SPACE_BITS),
+        .DATA_WIDTH(DATA_WIDTH),
+        .ADDR_WIDTH(ADDR_WIDTH),
+        .RST_ACT_LEVEL(RST_ACT_LEVEL)
+    )
+    // interconnection between testbench and DUT
+    // signal of the DUT(signal in the virtual interface)
+    HDL_DUT_U(
+        .CLK(timer_t_if.CLK),
+        .RST(timer_t_if.RST),
+        .P_IRQ(timer_t_if.P_IRQ),
+        .ADDRESS(timer_t_if.ADDRESS),
+        .REQUEST(timer_t_if.REQUEST),
+        .RESPONSE(timer_t_if.RESPONSE),
+        .DATA_OUT(timer_t_if.DATA_OUT),
+        .DATA_IN(timer_t_if.DATA_IN)
+    );
+
+    // dotiahnutie interneho signalu z DUT do UVM TB
+    // coverage.svh:9
+    bind top.HDL_DUT_U dut_internal_if ctrl(
+        .ctrl_reg_d(ctrl_reg_d)
+    );
+
+    // signal z dizajnu(signal na assertion module)
+    // assertions checker instance
+    bind HDL_DUT_U abv_timer abv_timer_module(
+        .CLK(CLK),
+        .RST(RST),
+        .P_IRQ(P_IRQ),
+        .ADDRESS(ADDRESS),
+        .REQUEST(REQUEST),
+        .DATA_IN(DATA_IN),
+        .RESPONSE(RESPONSE),
+        .DATA_OUT(DATA_OUT),
+        .ctrl_reg_d(ctrl_reg_d),
+        .cnt_reg_d(cnt_reg_d),
+        .cmp_reg_d(cmp_reg_d),
+        .cycle_cnt(cycle_cnt)
+    );
+
+    // run default test
+    initial begin
+        // register virtual interface to database
+        uvm_config_db #(virtual itimer_itf )::set( null,
+            "uvm_test_top",
+            "timer_t_if",
+            timer_t_if );
+
+        uvm_config_db #(virtual dut_internal_if )::set( null,"","dut_internal_if",top.HDL_DUT_U.ctrl ) ;
+        // start of the simulation
+        // launches the name of the particular test to run
+        run_test( "timer_t_test" );
+    end
+endmodule: top
+
+
+// ---- File: uvm_fve/wave.tcl ----
+# Signals of interfaces.
+proc basic { PATH } {
+    add wave -noupdate -divider "Basic signals"
+    add wave -noupdate -color yellow -label CLK $PATH/CLK
+    add wave -noupdate -color yellow -label RST $PATH/RST
+}
+
+proc itimer_itf { PATH } {
+    set PROBE_PATH $PATH
+
+    add wave -noupdate -divider "input"
+    add wave -noupdate -hex -label ADDRESS $PROBE_PATH/ADDRESS
+    add wave -noupdate -hex -label REQUEST $PROBE_PATH/REQUEST
+    add wave -noupdate -hex -label DATA_IN $PROBE_PATH/DATA_IN
+
+    add wave -noupdate -divider "TIMER DUT"
+    add wave -noupdate -divider "output"
+    add wave -noupdate -hex -label P_IRQ $PROBE_PATH/P_IRQ
+    add wave -noupdate -hex -label RESPONSE $PROBE_PATH/RESPONSE
+    add wave -noupdate -hex -label DATA_OUT $PROBE_PATH/DATA_OUT
+
+    add wave -noupdate -divider "regs:"
+    add wave -noupdate -hex -label cnt_reg_d sim:/top/HDL_DUT_U/cnt_reg_d
+    add wave -noupdate -hex -label cmp_reg_d sim:/top/HDL_DUT_U/cmp_reg_d
+    add wave -noupdate -hex -label ctrl_reg_d sim:/top/HDL_DUT_U/ctrl_reg_d
+    add wave -noupdate -hex -label cycle_cnt sim:/top/HDL_DUT_U/cycle_cnt
+
+    add wave -noupdate -divider "TIMER GM:"
+    add wave -noupdate -divider "output"
+    add wave -noupdate -hex -color orange -label P_IRQ sv_timer_t_gm_pkg::timer_t_gm::P_IRQ
+    add wave -noupdate -hex -color orange -label RESPONSE sv_timer_t_gm_pkg::timer_t_gm::RESPONSE
+    add wave -noupdate -hex -color orange -label DATA_OUT sv_timer_t_gm_pkg::timer_t_gm::DATA_OUT
+    add wave -noupdate -hex -color orange -label ctrl_reg sv_timer_t_gm_pkg::timer_t_gm::ctrl_reg
+    add wave -noupdate -hex -color orange -label timer_cnt sv_timer_t_gm_pkg::timer_t_gm::timer_cnt
+    add wave -noupdate -hex -color orange -label timer_cmp sv_timer_t_gm_pkg::timer_t_gm::timer_cmp
+    add wave -noupdate -hex -color orange -label cycle_cnt sv_timer_t_gm_pkg::timer_t_gm::cycle_cnt
+    add wave -noupdate -hex -color orange -label irq_signal_next_clock sv_timer_t_gm_pkg::timer_t_gm::irq_signal_next_clock
+    # add wave -noupdate -hex -color orange -label reset_cnt_next_clock sv_timer_t_gm_pkg::timer_t_gm::reset_cnt_next_clock
+}
+
+proc customize_gui { TOP_MODULE HDL_DUT } {
+    # View simulation waves
+    view wave
+    # Remove all previous waves first
+    delete wave *
+    # Clock and reset signals
+    puts $TOP_MODULE
+    puts $HDL_DUT
+    basic /top/timer_t_if
+    itimer_itf top/timer_t_if
+
+    # Additional wave configuration
+    TreeUpdate [SetDefaultTree]
+    configure wave -namecolwidth 200
+    configure wave -valuecolwidth 100
+    configure wave -justifyvalue left
+    configure wave -signalnamewidth 0
+    configure wave -gridoffset 0
+    configure wave -gridperiod {10 ns}
+    configure wave -griddelta 50
+    configure wave -timeline 0
+    configure wave -timelineunits ns
+    WaveRestoreZoom {0 ns} {250 ns}
+    update
+    view structure
+    view signals
+    wave refresh
+}
+
+
+// ---- File: uvm_fve/golden_model/golden_model.svh ----
+// Represents the golden model of the processor used to predict results of the DUT.
+class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
+
+    // registration of component tools
+    `uvm_component_utils( timer_t_gm )
+
+    // analysis port for outside components to access transactions from the monitor
+    uvm_analysis_port #(timer_t_transaction) timer_t_analysis_port;
+
+    // static local variables accesible by waveform
+    static logic                  P_IRQ = 0;
+    static logic [2:0]            RESPONSE;
+    static logic [DATA_WIDTH-1:0] DATA_OUT;
+
+    static logic data_out_next_clock = 0;
+    static logic [DATA_WIDTH-1:0] data_out_prev = 0;
+    // indicates reading from cycle count, the value is immediate
+    // otherwise the value of cmp_reg, cnt_reg, ctrl_reg is from the previous clock
+    static logic reading_cycle_cnt_l = 0;
+    static logic reading_cycle_cnt_h = 0;
+    static logic [DATA_WIDTH-1:0] data_out_next_clock_value;
+
+    static logic start_counting_next_clock = 0;
+    // local variables for predict
+    static logic cycle_cnt_reset_next_clock = 0;
+    static logic [(DATA_WIDTH*2)-1:0] cycle_cnt = 0;
+    static logic irq_signal = 0;
+
+    static logic ctrl_reg_next_clock = 0;
+    static logic [1:0] ctrl_reg_next_clock_value;
+    static logic [1:0] ctrl_reg = TIMER_CR_DISABLED;
+
+    static logic reset_signal = 0;
+    static logic disabled_signal = 0;
+    static logic irq_signal_next_clock = 0;
+    static logic [DATA_WIDTH-1:0] address;
+    static logic [DATA_WIDTH-1:0] data_out;
+    static logic [DATA_WIDTH-1:0] data_in;
+
+    static logic disable_timer_next_clock = 0;
+    static logic reset_cnt_next_clock = 0;
+    static logic reset_cnt_this_clock = 0;
+
+    static logic timer_cnt_next_clock = 0;
+    static logic [DATA_WIDTH-1:0] timer_cnt_next_clock_value;
+    static logic [DATA_WIDTH-1:0] timer_cnt;
+
+    static logic timer_cmp_next_clock = 0;
+    static logic [DATA_WIDTH-1:0] timer_cmp_next_clock_value;    
+    static logic [DATA_WIDTH-1:0] timer_cmp;
+
+    static logic response_next_clock = 0;
+    static logic [2:0] response_next_clock_value;
+    
+    static logic resetting_this_clock = 0;
+    static logic disabling_this_clock = 0;
+
+    // base name prefix for created transactions
+    string m_name = "gold";
+
+    // Constructor - creates new instance of this class
+    function new( string name = "m_timer_t_gm_h", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+    	super.build_phase( phase );
+
+      timer_t_analysis_port = new( "timer_t_analysis_port", this );
+
+    endfunction: build_phase
+
+    // Connect - create interconnection between child components
+    function void connect_phase( uvm_phase phase );
+        super.connect_phase( phase );
+    endfunction: connect_phase
+
+    // Write - get all transactions from driver for computing predictions
+    // receive data from driver via analytical port
+    function void write( T t );
+  		timer_t_transaction out_t;
+
+      out_t = timer_t_transaction::type_id::create(
+          $sformatf("%0s: %0t", m_name, $time) );
+
+      out_t.copy(t);
+
+      // predict outputs
+      predict( out_t );
+
+      // support function for displaying data in wave
+      wave_display_support_func(out_t);
+
+      // send predicted outputs to scoreboard
+      timer_t_analysis_port.write(out_t);
+  	endfunction: write
+
+    // implements behavior of the golden model
+    local function automatic void predict( timer_t_transaction t );
+        irq_signal = 0;
+        cycle_cnt = cycle_cnt + 1;
+        if (cycle_cnt_reset_next_clock == 1) begin
+            cycle_cnt_reset_next_clock = 0;
+            cycle_cnt = 0;
+        end
+
+        if (t.RST === RST_ACT_LEVEL) begin
+            reset_signal = 1;
+            irq_signal_next_clock = 0;
+            timer_cnt_next_clock_value = 0;
+            timer_cmp_next_clock_value = 0;
+            response_next_clock = 0;
+            response_next_clock_value = CP_RSP_IDLE;
+            cycle_cnt_reset_next_clock = 1;
+            timer_cnt = 0;
+            timer_cmp = 0;
+
+            t.P_IRQ = 0;
+            ctrl_reg = TIMER_CR_DISABLED;
+            t.RESPONSE = CP_RSP_IDLE;
+            t.DATA_OUT = 0;
+            return;
+        end else begin
+            reset_signal = 0;
+            t.P_IRQ = 0;
+        end
+
+        if (response_next_clock == 1) begin
+            response_next_clock = 0;
+            t.RESPONSE = response_next_clock_value;
+        end else begin
+            t.RESPONSE = CP_RSP_IDLE;
+        end
+
+        if (data_out_next_clock == 1) begin
+            data_out_next_clock = 0;
+            if (reading_cycle_cnt_l) begin
+                t.DATA_OUT = cycle_cnt[31:0];
+                data_out_prev = cycle_cnt[31:0];
+            end else if (reading_cycle_cnt_h) begin
+                t.DATA_OUT = cycle_cnt[63:32];
+                data_out_prev = cycle_cnt[63:32];
+            end else begin
+                t.DATA_OUT = data_out_next_clock_value;
+                data_out_prev = data_out_next_clock_value;
+            end
+        end else begin
+            t.DATA_OUT = data_out_prev;
+        end
+
+        if (disable_timer_next_clock == 1) begin
+            ctrl_reg = TIMER_CR_DISABLED;
+            disabling_this_clock = 1;
+        end
+
+        if (ctrl_reg_next_clock == 1) begin
+            ctrl_reg_next_clock = 0;
+            if (ctrl_reg == TIMER_CR_DISABLED && ctrl_reg_next_clock_value != TIMER_CR_DISABLED && !disabling_this_clock) begin
+                start_counting_next_clock = 1;
+            end
+
+            ctrl_reg = ctrl_reg_next_clock_value;
+        end
+        disabling_this_clock = 0;
+
+        // -------------------------------------------------
+        // prikaz na nulovanie v aktualnom takte
+        if (reset_cnt_next_clock == 1) begin
+            timer_cnt = 0;
+            reset_cnt_next_clock = 0;
+            reset_cnt_this_clock = 1;
+        end
+
+        // -------------------------------------------------
+        // inkrementacia cnt ak nie je disabled
+        if (ctrl_reg != TIMER_CR_DISABLED && !start_counting_next_clock && !reset_cnt_this_clock) begin
+            if (timer_cnt == 32'hffffffff) begin
+                timer_cnt = 0;
+            end else begin
+                timer_cnt = timer_cnt + 1;
+            end
+        end
+        start_counting_next_clock = 0;
+        reset_cnt_this_clock = 0;
+
+        // -------------------------------------------------
+        // prikaz na zapis do cnt/cmp
+        if (timer_cmp_next_clock == 1) begin
+            timer_cmp_next_clock = 0;
+            timer_cmp = timer_cmp_next_clock_value;
+        end
+
+        if (timer_cnt_next_clock == 1) begin
+            timer_cnt_next_clock = 0;
+            timer_cnt = timer_cnt_next_clock_value;
+        end
+        // -------------------------------------------------
+
+        if (irq_signal_next_clock == 1) begin
+            t.P_IRQ = 1;
+            irq_signal_next_clock = 0;
+        end
+
+        case (ctrl_reg)
+            TIMER_CR_DISABLED: begin
+            end
+            TIMER_CR_AUTO_RESTART: begin // 1
+                if (timer_cnt == timer_cmp) begin
+                    irq_signal_next_clock = 1;
+                    reset_cnt_next_clock = 1;
+                end
+            end
+            TIMER_CR_ONESHOT: begin // 2
+                if (timer_cnt == timer_cmp) begin
+                    irq_signal_next_clock = 1;
+                    disable_timer_next_clock = 1;
+                    reset_cnt_next_clock = 1;
+                end
+            end
+            TIMER_CR_CONTINUOUS: begin // 3
+                if (timer_cnt == timer_cmp) begin
+                    irq_signal_next_clock = 1;
+                    reset_cnt_next_clock = 0;
+                end
+            end
+        endcase;
+
+        if (t.REQUEST == CP_REQ_NONE) begin
+            response_next_clock = 1;
+            response_next_clock_value = CP_RSP_IDLE;
+        end else if (t.REQUEST == CP_REQ_RESERVED) begin
+            response_next_clock = 1;
+            response_next_clock_value = CP_RSP_ERROR;
+        end else if (t.REQUEST == CP_REQ_READ || t.REQUEST == CP_REQ_WRITE) begin
+            if (t.ADDRESS > TIMER_CYCLE_H) begin
+                // out of range access
+                response_next_clock = 1;
+                response_next_clock_value = CP_RSP_OOR;
+            end else if (t.ADDRESS[1:0] != 2'b00) begin
+                response_next_clock = 1;
+                response_next_clock_value = CP_RSP_UNALIGNED;
+            end else begin
+                case (t.REQUEST)
+                    CP_REQ_WRITE: begin
+                        case (t.ADDRESS)
+                            TIMER_CNT: begin
+                                timer_cnt_next_clock_value = t.DATA_IN;
+                                timer_cnt_next_clock = 1;
+                            end
+                            TIMER_CMP: begin
+                                timer_cmp_next_clock_value = t.DATA_IN;
+                                timer_cmp_next_clock = 1;
+
+                            end
+                            TIMER_CR: begin
+                                ctrl_reg_next_clock_value = t.DATA_IN;
+                                ctrl_reg_next_clock = 1;
+                                disable_timer_next_clock = 0;
+                                // ctrl_reg = t.DATA_IN;
+                            end
+                            TIMER_CYCLE_L: begin
+                                // ignore the write request, just acknowledge it
+                            end
+                            TIMER_CYCLE_H: begin
+                                // ignore the write request, just acknowledge it
+                            end
+                        endcase;
+                        response_next_clock = 1;
+                        response_next_clock_value = CP_RSP_ACK;
+                    end
+                    CP_REQ_READ: begin
+                        reading_cycle_cnt_l = 0;
+                        reading_cycle_cnt_h = 0;
+                        case (t.ADDRESS)
+                            TIMER_CNT: begin
+                                data_out_next_clock_value = timer_cnt;
+                            end
+                            TIMER_CMP: begin
+                                data_out_next_clock_value = timer_cmp;
+                            end
+                            TIMER_CR: begin
+                                data_out_next_clock_value = ctrl_reg;
+                            end
+                            TIMER_CYCLE_L: begin
+                                reading_cycle_cnt_l = 1;
+                                // no data out value, we need the read it next clock
+                            end
+                            TIMER_CYCLE_H: begin
+                                reading_cycle_cnt_h = 1;
+                                // no data out value, we need the read it next clock
+                            end
+                        endcase;
+                        data_out_next_clock = 1;
+                        response_next_clock = 1;
+                        response_next_clock_value = CP_RSP_ACK;
+                    end
+                endcase;
+            end
+        end
+
+    endfunction: predict
+
+    local function void set_default_outputs( timer_t_transaction t );
+        t.P_IRQ    = 0;
+        t.RESPONSE = 0;
+        t.DATA_OUT = 0;
+    endfunction: set_default_outputs
+
+    local function automatic void wave_display_support_func( timer_t_transaction t );
+        P_IRQ    = t.P_IRQ;
+        RESPONSE = t.RESPONSE;
+        DATA_OUT = t.DATA_OUT;
+    endfunction: wave_display_support_func
+
+endclass: timer_t_gm
+
+
+// ---- File: uvm_fve/golden_model/sv_golden_model_pkg.sv ----
+package sv_timer_t_gm_pkg;
+    import uvm_pkg::*;
+    import sv_param_pkg::*;
+    import sv_timer_t_agent_pkg::*;
+
+    `include "uvm_macros.svh"
+    `include "golden_model.svh"
+endpackage: sv_timer_t_gm_pkg
+
+
+// ---- File: uvm_fve/abv/abv_timer.sv ----
+`include "uvm_macros.svh"
+import uvm_pkg::*;
+import sv_param_pkg::*;
+
+module abv_timer (
+    input logic                  CLK,
+    input logic                  RST,
+    input logic                  P_IRQ,
+    input logic [ADDR_WIDTH-1:0] ADDRESS,
+    input logic [1:0]            REQUEST,
+    input logic [2:0]            RESPONSE,
+    input logic [DATA_WIDTH-1:0] DATA_OUT,
+    input logic [DATA_WIDTH-1:0] DATA_IN,
+    input logic [1:0]            ctrl_reg_d,
+    input logic [DATA_WIDTH-1:0] cnt_reg_d,
+    input logic [DATA_WIDTH-1:0] cmp_reg_d,
+    input logic [63:0]           cycle_cnt
+);
+
+// default disable iff (RST === RST_ACT_LEVEL);
+
+property pr1;
+    @(posedge CLK) RST === 0 |-> ctrl_reg_d === 0;
+endproperty
+
+property pr2;
+    @(posedge CLK) disable iff (!RST) RST === 0 |-> cycle_cnt === 0;
+endproperty
+
+// ak je adresa mimo rozsah -> skontroluj v dalsom cykle vystavenie response OOR
+
+// Property pr3: Checks if an out-of-range address results in OOR response next cycle
+// Assuming CP_RSP_OOR is defined in sv_param_pkg
+property pr3;
+    @(posedge CLK)  (ADDRESS > 8'h14) |-> ##1 (RESPONSE === CP_RSP_OOR);
+endproperty
+
+
+// counter register is not stable while waiting for IRQ
+sequence checkNotStable;
+    // cnt reg is not stable while waiting for IRQ
+    !$stable(cnt_reg_d) throughout (RST === RST_ACT_LEVEL && P_IRQ === 0);
+endsequence
+
+// mod nie je disabled
+property prStable;
+    @(posedge CLK) ctrl_reg_d != TIMER_CR_DISABLED |-> checkNotStable;
+endproperty
+
+property prUnknown;
+    @(posedge CLK) RST === !RST_ACT_LEVEL |-> (!$isunknown(ADDRESS)) && (!$isunknown(REQUEST) && (!$isunknown(RESPONSE)) && (!$isunknown(P_IRQ)));
+endproperty
+
+property prUnknownDataRead;
+    @(posedge CLK) (REQUEST === CP_REQ_READ)
+        |=> (!$isunknown((DATA_IN))) && (!$isunknown((DATA_OUT)));
+endproperty
+
+property prUnknownDataWrite;
+    @(posedge CLK) (REQUEST === CP_REQ_WRITE)
+        |-> (!$isunknown((DATA_IN))) && (!$isunknown((DATA_OUT)));
+endproperty
+
+property prReadWriteOOR;
+     @(posedge CLK) (REQUEST === CP_REQ_READ || REQUEST === CP_REQ_WRITE) && (ADDRESS > 8'h14)
+        |-> ##1 (RESPONSE === CP_RSP_OOR);
+endproperty
+
+property prReadWriteUnaligned;
+     @(posedge CLK) (REQUEST === CP_REQ_READ || REQUEST === CP_REQ_WRITE) && (ADDRESS[1:0] != 2'b00)
+        |-> ##1 (RESPONSE === CP_RSP_UNALIGNED);
+endproperty
+
+property checkWriteReadSameAddr;
+    logic [ADDR_WIDTH-1:0] v_addr;
+    logic [DATA_WIDTH-1:0] v_data;
+
+    @(posedge CLK)
+    ( (REQUEST === CP_REQ_WRITE),
+      v_addr = ADDRESS,
+      v_data = DATA_IN )
+    ##1
+    ( REQUEST === CP_REQ_READ && ADDRESS === v_addr )
+    |->
+    ##1
+    ( DATA_OUT === v_data );
+endproperty
+
+property ackAfterCorrectAddr;
+    @(posedge CLK)
+    ( (REQUEST === CP_REQ_READ || REQUEST === CP_REQ_WRITE) && ADDRESS <= 8'h14 && ADDRESS[1:0] === 2'b00)
+    |-> ##1
+    ( RESPONSE === CP_RSP_ACK );
+endproperty
+
+property idleResponseToNonReq;
+    @(posedge CLK)
+    ( (REQUEST === CP_REQ_NONE) )
+    |-> ##1
+    ( RESPONSE === CP_RSP_IDLE );
+endproperty
+
+property errorResponseToResReq;
+    @(posedge CLK)
+    ( (REQUEST === CP_REQ_RESERVED) )
+    |-> ##1
+    ( RESPONSE === CP_RSP_ERROR );
+endproperty
+
+property noWaitResponse;
+    @(posedge CLK) (RST === !RST_ACT_LEVEL) |-> !(RESPONSE === CP_RSP_WAIT);
+endproperty
+
+property irqAfterCmpCntMatch;
+    @(posedge CLK iff ctrl_reg_d != TIMER_CR_DISABLED) cnt_reg_d === cmp_reg_d
+        |-> ##1 (P_IRQ === 1);
+endproperty
+
+property clearCntAfterCmpCntMatchAutoRestart;
+    @(posedge CLK) ((cnt_reg_d === cmp_reg_d) && (ctrl_reg_d === TIMER_CR_AUTO_RESTART)
+        && !((REQUEST == CP_REQ_WRITE && DATA_IN != TIMER_CR_DISABLED)))
+        |-> ##1 ( cnt_reg_d === 0 );
+endproperty
+
+// does not apply if:
+//      we are changing mode
+//      OR we are writing another value to CNT
+property incCntAfterCmpCntMatchContinuous;
+    @(posedge CLK) ((cnt_reg_d === cmp_reg_d) && (ctrl_reg_d === TIMER_CR_CONTINUOUS)
+        && !((REQUEST == CP_REQ_WRITE && ADDRESS == TIMER_CR && DATA_IN != TIMER_CR_DISABLED) || (REQUEST == CP_REQ_WRITE && ADDRESS == TIMER_CNT)) )
+        |-> ##1 ( cnt_reg_d === $past(cnt_reg_d) + 1 );
+endproperty
+
+property clearCntDisAfterCmpCntMatchOneShot;
+    @(posedge CLK) ((cnt_reg_d === cmp_reg_d) && (ctrl_reg_d === TIMER_CR_ONESHOT)
+        && !((REQUEST == CP_REQ_WRITE && DATA_IN != TIMER_CR_DISABLED)) )
+        |-> ##1 (cnt_reg_d === 0 && ctrl_reg_d === TIMER_CR_DISABLED);
+endproperty
+
+property cycleLRead;
+    @(posedge CLK) (ADDRESS === TIMER_CYCLE_L && REQUEST === CP_REQ_READ)
+        |-> ##1 (DATA_OUT === cycle_cnt[31:0]);
+endproperty
+
+property cycleHRead;
+    @(posedge CLK) (ADDRESS === TIMER_CYCLE_H && REQUEST === CP_REQ_READ)
+        |-> ##1 (DATA_OUT === cycle_cnt[63:32]);
+endproperty
+
+property cycleCntZeroDuringReset;
+    @(posedge CLK) (RST === RST_ACT_LEVEL)
+        |-> ##1 (cycle_cnt === 0);
+endproperty
+
+
+
+// --- Assertions ---
+
+ResetCtrlRegCheck: assert property (pr1)
+else
+    // Fail action block
+    begin
+        `uvm_error("ABV_TIMER_ASSERT", "Assertion pr1 FAILED: ctrl_reg_d not reset correctly when RST === 0.")
+    end
+
+ResetCycleCntCheck: assert property (pr2)
+else
+    // Fail action block
+    begin
+        // Using fatal as in the original code
+        `uvm_error("ABV_TIMER_ASSERT", "Assertion pr2 FAILED: cycle_cnt not reset correctly when RST === 0.")
+    end
+
+// You defined pr3 but didn't assert it, let's add it:
+AddrRangeCheck: assert property (pr3)
+else
+    // Fail action block
+    begin
+        `uvm_error("ABV_TIMER_ASSERT", $sformatf("Assertion pr3 FAILED: OOR Address 0x%0h did not trigger OOR response (RESPONSE = %0d).", ADDRESS, RESPONSE))
+    end
+
+// SignalsStableWhenNotDisabled: assert property(prStable)
+// else
+//     // Fail action block
+//     begin
+//         // Using fatal as in the original code
+//         `uvm_error("SignalsStableWhenNotUnknown", "Assertion prStable FAILED: Signals stable when mode not disabled.")
+//     end
+
+SignalsDefined: assert property(prUnknown)
+else
+    // Fail action block
+    begin
+        // Using fatal as in the original code
+        `uvm_error("InputSignalNotUnknown", "Assertion prUnknown FAILED: DATA_IN and DATA_OUT are unknown.")
+    end
+
+// a   prUnknownDataRead
+a_prUnknownDataRead: assert property (prUnknownDataRead) else $error("ACK did not follow REQ within 2 cycles");
+
+// a   prUnknownDataWrite
+a_prUnknownDataWrite: assert property (prUnknownDataWrite) else $error("ACK did not follow REQ within 2 cycles");
+
+// a+c prReadOOR
+a_prReadWriteOOR: assert property (prReadWriteOOR) else $error("ACK did not follow REQ within 2 cycles");
+c_prReadWriteOOR: cover property (prReadWriteOOR);
+
+// a+c prReadWriteUnaligned
+a_prReadWriteUnaligned: assert property (prReadWriteUnaligned) else $error("ACK did not follow REQ within 2 cycles");
+c_prReadWriteUnaligned: cover property (prReadWriteUnaligned);
+
+// a+c checkWriteReadSameAddr
+a_checkWriteReadSameAddr: assert property (checkWriteReadSameAddr) else $error("ACK did not follow REQ within 2 cycles");
+c_checkWriteReadSameAddr: cover property (checkWriteReadSameAddr);
+
+// a+c ackAfterCorrectAddr
+a_ackAfterCorrectAddr: assert property (ackAfterCorrectAddr) else $error("ACK did not follow REQ within 2 cycles");
+c_ackAfterCorrectAddr: cover property (ackAfterCorrectAddr);
+
+// a+c idleResponseToNonReq
+a_idleResponseToNonReq: assert property (idleResponseToNonReq) else $error("ACK did not follow REQ within 2 cycles");
+c_idleResponseToNonReq: cover property (idleResponseToNonReq);
+
+a_errorResponseToResReq: assert property (errorResponseToResReq) else $error("ACK did not follow REQ within 2 cycles");
+// a   noWaitResponse
+a_noWaitResponse: assert property (noWaitResponse) else $error("ACK did not follow REQ within 2 cycles");
+
+// a+c irqAfterCmpCntMatch
+a_irqAfterCmpCntMatch: assert property (irqAfterCmpCntMatch) else $error("ACK did not follow REQ within 2 cycles");
+c_irqAfterCmpCntMatch: cover property (irqAfterCmpCntMatch);
+
+// a+c clearCntAfterCmpCntMatchAutoRestart
+a_clearCntAfterCmpCntMatchAutoRestart: assert property (clearCntAfterCmpCntMatchAutoRestart) else $error("ACK did not follow REQ within 2 cycles");
+c_clearCntAfterCmpCntMatchAutoRestart: cover property (clearCntAfterCmpCntMatchAutoRestart);
+
+// a+c incCntAfterCmpCntMatchContinuous
+a_incCntAfterCmpCntMatchContinuous: assert property (incCntAfterCmpCntMatchContinuous) else $error("ACK did not follow REQ within 2 cycles");
+c_incCntAfterCmpCntMatchContinuous: cover property (incCntAfterCmpCntMatchContinuous);
+
+// a+c clearCntDisAfterCmpCntMatchOneShot
+a_clearCntDisAfterCmpCntMatchOneShot: assert property (clearCntDisAfterCmpCntMatchOneShot) else $error("ACK did not follow REQ within 2 cycles");
+c_clearCntDisAfterCmpCntMatchOneShot: cover property (clearCntDisAfterCmpCntMatchOneShot);
+
+// a+c cycleLRead
+a_cycleLRead: assert property (cycleLRead) else $error("ACK did not follow REQ within 2 cycles");
+c_cycleLRead: cover property (cycleLRead);
+
+// a+c cycleHRead
+a_cycleHRead: assert property (cycleHRead) else $error("ACK did not follow REQ within 2 cycles");
+c_cycleHRead: cover property (cycleHRead);
+
+// a+c cycleCntZeroDuringReset
+a_cycleCntZeroDuringReset: assert property (cycleCntZeroDuringReset) else $error("ACK did not follow REQ within 2 cycles");
+c_cycleCntZeroDuringReset: cover property (cycleCntZeroDuringReset);
+endmodule : abv_timer
+
+
+// ---- File: uvm_fve/agents/agent.svh ----
+// Represents agent class handling the interface pins of the DUT/DUV.
+class timer_t_agent extends uvm_agent;
+
+    // registration of component tools
+    `uvm_component_utils( timer_t_agent )
+
+    // analysis ports for outside components to access transactions from the monitor and driver
+    uvm_analysis_port #(timer_t_transaction) analysis_port_driver;
+    uvm_analysis_port #(timer_t_transaction) analysis_port_monitor;
+
+    // component members for passive mode
+    timer_t_monitor m_monitor_h;
+    timer_t_coverage m_coverage_h;
+    // component members for active mode
+    timer_t_driver m_driver_h;
+    timer_t_sequencer m_sequencer_h;
+
+    // Constructor - creates new instance of this class
+    function new( string name = "m_agent_h", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+        super.build_phase( phase );
+        m_monitor_h = timer_t_monitor::type_id::create( "m_monitor_h", this );
+        m_coverage_h = timer_t_coverage::type_id::create( "m_coverage_h", this );
+        m_driver_h = timer_t_driver::type_id::create( "m_driver_h", this );
+        m_sequencer_h = timer_t_sequencer::type_id::create( "m_sequencer_h", this );
+    endfunction: build_phase
+
+    // Connect - create interconnection between child components
+    function void connect_phase( uvm_phase phase );
+        virtual itimer_itf vif;
+        super.connect_phase( phase );
+
+        if ( !uvm_config_db #(virtual itimer_itf)::get(null,
+            "uvm_test_top",
+            "timer_t_if",
+            vif) ) begin
+            `uvm_fatal( "configuration:", "Cannot find 'timer_t_if' inside uvm_config_db, probably not set!" )
+        end
+
+        // connect monitor and assign interface
+        analysis_port_monitor= m_monitor_h.analysis_port;
+        m_monitor_h.vif = vif;
+
+        // connect monitor with coverage subscriber
+        m_monitor_h.analysis_port.connect( m_coverage_h.analysis_export );
+
+        // connect the driver and sequencer + driver to analytical port
+        m_driver_h.seq_item_port.connect( m_sequencer_h.seq_item_export );
+        analysis_port_driver = m_driver_h.analysis_port;
+        m_driver_h.vif = vif;
+    endfunction: connect_phase
+
+endclass: timer_t_agent
+
+
+// ---- File: uvm_fve/agents/coverage.svh ----
+// This class measures exercised combinations of DUTs interface ports.
+class timer_t_coverage extends uvm_subscriber #(timer_t_transaction);
+
+    // registration of component tools
+    `uvm_component_utils( timer_t_coverage )
+
+    // member attributes
+    local T m_transaction_h;
+    virtual dut_internal_if ivif;
+
+    // Covergroup definition
+    covergroup FunctionalCoverage( string inst );
+    
+        // 1 Coverpoint a biny pro módy timeru, abychom měli jistotu, že se každý mód aktivoval alespoň jednou. Váha 0 (pomocný coverpoint pro cross).
+        modes: coverpoint ivif.ctrl_reg_d {
+            bins disabled = { TIMER_CR_DISABLED };
+            bins auto_restart = { TIMER_CR_AUTO_RESTART };
+            bins oneshot = { TIMER_CR_ONESHOT };
+            bins continuous = { TIMER_CR_CONTINUOUS };
+            option.weight = 0;
+        }
+
+        // 2 Coverpoint a biny pro povolené operace (REQUEST = write, read, none, hodnota RESERVED by měla být ignorována). Váha 0 (pomocný coverpoint pro cross).
+        request: coverpoint m_transaction_h.REQUEST {
+            bins req_none = { CP_REQ_NONE };
+            bins req_read = { CP_REQ_READ };
+            bins req_write = { CP_REQ_WRITE };
+            option.weight = 0;
+        }
+
+        // 3 Coverpoint a biny pro hodnoty 0 a 1 signálu reset.
+        reset_inactive: coverpoint m_transaction_h.RST {
+            bins inactive = { ~RST_ACT_LEVEL };
+        }
+
+        // 4 Transition coverpoint pro přechody na signálu reset: 0->1, 1->0. Každý přechod musí nastat alespoň 5x.
+        cv4: coverpoint m_transaction_h.RST {
+            bins transitions[] = (0=>1), (1=>0);
+            option.at_least = 5;
+        }
+
+        // 5 Coverpoint a biny pro adresy 8'h0, 8'h4, 8'h8, 8'h10, 8'h14. Váha 0 (pomocný coverpoint pro cross). 
+        addresses: coverpoint m_transaction_h.ADDRESS {
+            bins addr_cnt   = { TIMER_CNT };
+            bins addr_cmp   = { TIMER_CMP };
+            bins addr_cr    = { TIMER_CR };
+            bins addr_cl_l  = { TIMER_CYCLE_L };
+            bins addr_cl_h  = { TIMER_CYCLE_H };
+            option.weight = 0;
+        }
+
+        // 6 Cross coverpoint všech adres (můžete použít coverpoint z 5.), operace write, a neaktivního resetu (můžete použít coverpoint z 3. a omezit se na neaktivní reset).
+        cv6: cross request, reset_inactive, addresses {
+            bins all_addr_write_no_rst = binsof(addresses) && binsof(reset_inactive) && binsof(request.req_write);
+        }
+
+        // 7 Cross coverpoint všech adres (můžete použít coverpoint z 5.), operace read, a neaktivního resetu (můžete použít coverpoint z 3. a omezit se na neaktivní reset).
+        cv7: cross request, reset_inactive, addresses {
+            bins all_addr_write_no_rst = binsof(addresses) && binsof(reset_inactive) && binsof(request.req_read);
+        }
+
+        // 8 Coverpoint a biny pro hodnoty 0 a 1 signálu přerušení.
+        irq: coverpoint m_transaction_h.P_IRQ {
+            bins irq_active   = { 1 };
+            bins irq_inactive = { 0 };
+        }
+        
+        // 9 Transition coverpoint pro přechody na signálu přerušení: 0->1, 1->0. Každý přechod musí nastat alespoň 10x.
+        cv9: coverpoint m_transaction_h.P_IRQ {
+            bins transitions[] = (0=>1), (1=>0);
+            option.at_least = 10;
+        }
+
+        // 10 Cross coverpoint pro aktivní přerušení ve všech módech (kromě DISABLED).
+        cv10: cross modes, irq {
+            bins auto_restart = binsof(modes.auto_restart) && binsof(irq.irq_active);
+            bins oneshot = binsof(modes.oneshot) && binsof(irq.irq_active);
+            bins continuous = binsof(modes.continuous) && binsof(irq.irq_active);
+        }
+
+        // 11 Transition coverpoint pro přechody mezi módy, tzn. např. z módu ONE_SHOT do DISABLED, z DISABLED do AUTO_RESTART atd.
+        all_modes_transitions: coverpoint ivif.ctrl_reg_d {
+            bins transitions[] = ([TIMER_CR_DISABLED:TIMER_CR_CONTINUOUS] => [TIMER_CR_DISABLED:TIMER_CR_CONTINUOUS]), 
+                                ([TIMER_CR_CONTINUOUS:TIMER_CR_DISABLED] => [TIMER_CR_CONTINUOUS:TIMER_CR_DISABLED]);
+            option.at_least = 10;
+        }
+
+        // 12 Cross coverpoint všech adres, všech operací kromě RESERVED (můžete použít coverpoint z 2.),
+        // neaktivního resetu (můžete použít coverpoint z 3. a omezit se na neaktivní reset), a všech módů
+        // (můžete použít coverpoint z 1).
+        cv12: cross addresses, request, reset_inactive, modes {
+            bins all = binsof(addresses) && binsof(request) && binsof(reset_inactive) && binsof(modes);
+        }
+
+    endgroup
+
+    // Constructor - creates new instance of this class
+    function new( string name = "m_coverage_h", uvm_component parent = null );
+        super.new( name, parent );
+        FunctionalCoverage = new( "timer" );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+        super.build_phase( phase );
+        if ( !uvm_config_db #(virtual dut_internal_if)::get(this,
+            "*", "dut_internal_if", ivif) ) begin
+            `uvm_fatal( "configuration:", "Cannot find 'dut_internal_if' inside uvm_config_db, probably not set!" )
+        end
+    endfunction: build_phase
+
+    // Write - obligatory function, samples value on the interface.
+    function void write( T t );
+        // skip invalid transactions
+        m_transaction_h = t;
+        FunctionalCoverage.sample();
+    endfunction: write
+
+endclass: timer_t_coverage
+
+
+// ---- File: uvm_fve/agents/driver.svh ----
+// Definition of the driver class 'timer_t_driver' used for communication with agents input interface.
+class timer_t_driver extends uvm_driver #(timer_t_transaction);
+
+    // registration of component tools
+    `uvm_component_utils( timer_t_driver )
+
+    // reference to the virtual interface, initialized during the connect phase by parent agent
+    virtual itimer_itf vif;
+
+    uvm_analysis_port #(timer_t_transaction) analysis_port;
+
+    // Constructor - creates new instance of this class
+    function new( string name = "m_driver_h", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+        super.build_phase( phase );
+        analysis_port = new( "analysis_port", this );
+    endfunction: build_phase
+
+    // Run - starts the processing in driver (bidirectional)
+    task run_phase( uvm_phase phase );
+        // synchronize with DUT
+        vif.wait_for_clock();
+        forever begin
+            // get next available sequence item
+            seq_item_port.get_next_item( req );
+            // drive ports
+            vif.drive( req );
+            // send transaction to GM
+            analysis_port.write( req );
+            // synchronize with DUT
+            vif.wait_for_clock();
+            // received sequence has been consumed
+            seq_item_port.item_done();
+        end
+    endtask: run_phase
+
+endclass: timer_t_driver
+
+
+// ---- File: uvm_fve/agents/ifc.sv ----
+`include "uvm_macros.svh"
+
+// import agent package for transaction and wrapper base classes
+import uvm_pkg::*;
+import sv_param_pkg::*;
+import sv_timer_t_agent_pkg::*;
+
+// DUT interface pins
+interface itimer_itf( input logic CLK );
+
+    // signals of the virtual interface 1:1
+    // member signals
+    logic                  RST;
+    logic                  P_IRQ;
+    logic [ADDR_WIDTH-1:0] ADDRESS;
+    logic [1:0]            REQUEST;
+    logic [2:0]            RESPONSE;
+    logic [DATA_WIDTH-1:0] DATA_OUT;
+    logic [DATA_WIDTH-1:0] DATA_IN;
+
+    // clocking blocks
+
+    // testbench point of view
+    clocking cb @( posedge CLK );
+        output RST, ADDRESS, REQUEST, DATA_IN;
+        input  P_IRQ, RESPONSE, DATA_OUT;
+    endclocking: cb
+
+    // monitor point of view
+    clocking cbm @( posedge CLK );
+        input  RST, P_IRQ, ADDRESS, REQUEST, RESPONSE, DATA_OUT, DATA_IN;
+    endclocking: cbm
+
+    // drive - drive input and inout pins
+    task automatic drive( timer_t_transaction t );
+        cb.RST     <= t.RST;
+        cb.ADDRESS <= t.ADDRESS;
+        cb.REQUEST <= t.REQUEST;
+        cb.DATA_IN <= t.DATA_IN;
+    endtask: drive
+
+    // monitor - read values on all interface pins using monitor clocking blocks
+    task automatic monitor( timer_t_transaction t );
+        t.RST      = cbm.RST;
+        t.P_IRQ    = cbm.P_IRQ;
+        t.ADDRESS  = cbm.ADDRESS;
+        t.REQUEST  = cbm.REQUEST;
+        t.RESPONSE = cbm.RESPONSE;
+        t.DATA_OUT = cbm.DATA_OUT;
+        t.DATA_IN  = cbm.DATA_IN;
+    endtask: monitor
+
+    // monitor - read values on all interface pins asynchronously (no clocking blocks)
+    // after analysis_port.write( dut ) in monitor.run_phase
+    task automatic async_monitor( timer_t_transaction t );
+        t.RST      = RST;
+        t.P_IRQ    = P_IRQ;
+        t.ADDRESS  = ADDRESS;
+        t.REQUEST  = REQUEST;
+        t.RESPONSE = RESPONSE;
+        t.DATA_OUT = DATA_OUT;
+        t.DATA_IN  = DATA_IN;
+    endtask: async_monitor
+
+    // wait for n clock cycles
+    task automatic wait_for_clock( int n = 1 );
+        repeat ( n ) begin
+            @( cbm );
+        end
+    endtask: wait_for_clock
+
+    // wait for reset to finish
+    task automatic wait_for_reset_inactive();
+        @( posedge RST );
+    endtask: wait_for_reset_inactive
+
+endinterface: itimer_itf
+
+// Interface usable to get to internal signals of the DUT
+interface dut_internal_if(logic [1:0]ctrl_reg_d);
+endinterface: dut_internal_if
+
+
+// ---- File: uvm_fve/agents/monitor.svh ----
+// This class is used to monitor interface pins of the DUT/DUV.
+class timer_t_monitor extends uvm_monitor;
+
+    // registration of component tools
+    `uvm_component_utils( timer_t_monitor )
+
+    // reference to the virtual interface, initialized during the connect phase by parent agent
+    // interconnection between the monitor and the DUT
+    virtual itimer_itf vif;
+    // used to send transactions to all connected components
+    uvm_analysis_port #(timer_t_transaction) analysis_port;
+    // base name prefix for created transactions
+    string m_name = "dut";
+
+    // Constructor - creates new instance of this class
+    function new( string name = "m_monitor_h", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+        super.build_phase( phase );
+        analysis_port = new( "analysis_port", this );
+    endfunction: build_phase
+
+    // Run - starts the processing in monitor
+    task run_phase( uvm_phase phase );
+        timer_t_transaction dut;
+        // start processing after clock becomes active
+        vif.wait_for_clock();
+        // monitor interface every clock cycle
+        forever begin
+            // create new transaction using factory
+            dut = timer_t_transaction::type_id::create(
+            $sformatf("%0s: %0t", m_name, $time) );
+            // synchronize with the DUT
+            vif.wait_for_clock();
+            // receive interface pin values
+            // and store them in the transaction
+            vif.monitor( dut );
+            //dut.print();
+            // send it to the scoreboard, subscribers, ...
+            analysis_port.write( dut );
+        end
+    endtask: run_phase
+
+endclass: timer_t_monitor
+
+
+// ---- File: uvm_fve/agents/new_sequence.svh ----
+// This class represents UVM sequence reseting the DUT/DUV.
+class new_timer_t_sequence_reset extends timer_t_sequence;
+
+    // registration of object tools
+    `uvm_object_utils( new_timer_t_sequence_reset )
+
+    // Constructor - creates new instance of this class
+    function new( string name = "new_timer_t_sequence_reset" );
+        super.new( name );
+    endfunction: new
+
+    // body 
+    task body();
+        // set reset values, randomize() cannot be used here
+        default_RST     = RST_ACT_LEVEL;
+        default_ADDRESS = 0;
+        default_REQUEST = 0;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+        create_and_finish_item();
+    endtask: body
+endclass: new_timer_t_sequence_reset
+
+class new_timer_t_sequence_basic extends timer_t_sequence;
+
+    // registration of object tools
+    `uvm_object_utils( new_timer_t_sequence_basic )
+
+    // Constructor - creates new instance of this class
+    function new( string name = "new_timer_t_sequence_basic" );
+        super.new( name );
+    endfunction: new
+
+    // body - implements behavior of the reset sequence (unidirectional)
+    task body();
+        default_RST = ~RST_ACT_LEVEL;
+
+        //setting counter to 0
+        default_ADDRESS = TIMER_CNT; // 8'h00
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 32'b0;
+        create_and_finish_item();
+
+        //setting compare to 4
+        default_ADDRESS = TIMER_CMP; // 8'h04
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 32'b100;
+        create_and_finish_item();
+
+        //setting control to AUTO_RESTART
+        default_ADDRESS = TIMER_CR; // 8'h08
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = TIMER_CR_AUTO_RESTART;
+        create_and_finish_item();
+
+        // just counting
+        default_ADDRESS = 32'b0;
+        default_REQUEST = 3'b0;
+        default_DATA_IN = 32'b00;
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+
+        // reset
+        default_RST     = RST_ACT_LEVEL;
+        default_ADDRESS = 0;
+        default_REQUEST = 0;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+        default_RST = ~RST_ACT_LEVEL;
+        create_and_finish_item();
+
+        //setting control to ONE_SHOT
+        default_ADDRESS = TIMER_CR; // 8'h08
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = TIMER_CR_ONESHOT;
+        create_and_finish_item();
+
+        // just counting
+        default_ADDRESS = 32'b0;
+        default_REQUEST = 3'b0;
+        default_DATA_IN = 32'b00;
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+
+        // reset
+        default_RST     = RST_ACT_LEVEL;
+        default_ADDRESS = 0;
+        default_REQUEST = 0;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+        default_RST = ~RST_ACT_LEVEL;
+        create_and_finish_item();
+
+        //setting control to ONE_SHOT
+        default_ADDRESS = TIMER_CR; // 8'h08
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = TIMER_CR_CONTINUOUS;
+        create_and_finish_item();
+
+        // just counting
+        default_ADDRESS = 32'b0;
+        default_REQUEST = 3'b0;
+        default_DATA_IN = 32'b00;
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+
+        default_ADDRESS = 32'h17;
+        default_REQUEST = CP_REQ_WRITE;
+        default_DATA_IN = TIMER_CR_CONTINUOUS;
+        create_and_finish_item();
+        create_and_finish_EMPTY_item();
+        create_and_finish_EMPTY_item();
+        create_and_finish_EMPTY_item();
+        create_and_finish_EMPTY_item();
+    endtask: body
+
+endclass: new_timer_t_sequence_basic
+
+
+class random1_timer_t_sequence extends uvm_sequence #(extended1_timer_t_transaction);
+    `uvm_object_utils( random1_timer_t_sequence )
+
+    // Constructor
+    function new( string name = "random1_timer_t_sequence" );
+        super.new( name );
+    endfunction: new
+endclass: random1_timer_t_sequence
+
+// class new_timer_t_sequence_rand extends timer_t_sequence;
+//     // registration of object tools
+//     `uvm_object_utils( new_timer_t_sequence_rand )
+
+//     // default constraints for each input interface port
+
+//     // Constructor - creates new instance of this class
+// 	  function new( string name = "new_timer_t_sequence_rand" );
+// 		    super.new( name );
+// 	  endfunction: new
+
+//   	// body - implements behavior of the reset sequence (unidirectional)
+//   	task body();
+//   	  // initialize PRNG
+//   	  this.srandom( SEED );
+//   	  repeat ( TRANSACTION_COUNT1 ) begin
+//         extended1_timer_t_transaction ext_txn;
+//         ext_txn = extended1_timer_t_transaction::type_id::create("ext_txn");
+//   	    if ( !this.randomize() ) begin
+//   	      `uvm_error( "body:", "Failed to randomize!" )
+//   	    end
+//   	    create_and_finish_item();
+//   	  end
+//   	endtask: body
+// endclass: new_timer_t_sequence_rand
+
+class new_timer_t_sequence_rand extends random1_timer_t_sequence;
+    `uvm_object_utils( new_timer_t_sequence_rand )
+
+    function new( string name = "new_timer_t_sequence_rand" );
+        super.new( name );
+        this.srandom( SEED );
+    endfunction: new
+
+    task body();
+        REQ item;
+        repeat ( TRANSACTION_COUNT1 ) begin
+            item = extended1_timer_t_transaction::type_id::create("item");
+
+            start_item(item);
+
+            if ( !item.randomize() ) begin
+                `uvm_error( get_type_name(), "Failed to randomize transaction item!" )
+            end else begin
+                 `uvm_info(get_type_name(), $sformatf("Randomized item:\n%s", item.sprint()), UVM_HIGH)
+            end
+
+            finish_item(item);
+        end
+    endtask: body
+endclass: new_timer_t_sequence_rand
+
+
+// ---- File: uvm_fve/agents/pseudo_random_sequence.svh ----
+class random_timer_t_sequence extends uvm_sequence #(extended_timer_t_transaction);
+    `uvm_object_utils( random_timer_t_sequence )
+
+    // Constructor
+    function new( string name = "random_timer_t_sequence" );
+        super.new( name );
+    endfunction: new
+endclass: random_timer_t_sequence
+
+class pseudo_random_seq extends random_timer_t_sequence;
+    `uvm_object_utils( pseudo_random_seq )
+
+    function new( string name = "pseudo_random_seq" );
+        super.new( name );
+        this.srandom( SEED );
+    endfunction: new
+
+    task body();
+        REQ item;
+        repeat ( TRANSACTION_COUNT ) begin
+            item = extended_timer_t_transaction::type_id::create("item");
+
+            start_item(item);
+
+            if ( !item.randomize() ) begin
+                `uvm_error( get_type_name(), "Failed to randomize transaction item!" )
+            end else begin
+                 `uvm_info(get_type_name(), $sformatf("Randomized item:\n%s", item.sprint()), UVM_HIGH)
+            end
+
+            finish_item(item);
+        end
+    endtask: body
+endclass: pseudo_random_seq
+
+
+// ---- File: uvm_fve/agents/sequence.svh ----
+// This class represents UVM sequence base for DUT/DUV.
+class timer_t_sequence extends uvm_sequence #(timer_t_transaction);
+
+    // registration of object tools
+    `uvm_object_utils( timer_t_sequence )
+
+    // local shotimerut to transaction type
+    typedef REQ seq_item_t;
+    // member attributes, equivalent with interface ports
+    rand logic                  default_RST;
+    rand logic [ADDR_WIDTH-1:0] default_ADDRESS;
+    rand logic [1:0]            default_REQUEST;
+    rand logic [DATA_WIDTH-1:0] default_DATA_IN;
+
+    // Constructor - creates new instance of this class
+    function new( string name = "timer_t_sequence" );
+        super.new( name );
+    endfunction: new
+
+    // create_and_finish_item - create single item, set default values and finish it
+    protected task automatic create_and_finish_item();
+        seq_item_t item;
+        // create item using the factory
+        item = seq_item_t::type_id::create( "item" );
+        // blocks until the sequencer grants the sequence access to the driver
+        start_item( item );
+        // prepare item to be used (assign default data)
+        item.RST     = default_RST;
+        item.ADDRESS = default_ADDRESS;
+        item.REQUEST = default_REQUEST;
+        item.DATA_IN = default_DATA_IN;
+        // block until the driver has completed its side of the transfer protocol
+        finish_item( item );
+    endtask: create_and_finish_item
+
+    protected task automatic create_and_finish_EMPTY_item();
+        seq_item_t item;
+        // create item using the factory
+        item = seq_item_t::type_id::create( "item" );
+        // blocks until the sequencer grants the sequence access to the driver
+        start_item( item );
+        // prepare item to be used (assign default data)
+        item.RST     = ~RST_ACT_LEVEL;
+        item.ADDRESS = 0;
+        item.REQUEST = 0;
+        item.DATA_IN = 0;
+        // block until the driver has completed its side of the transfer protocol
+        finish_item( item );
+    endtask: create_and_finish_EMPTY_item
+
+endclass: timer_t_sequence
+
+// This class represents UVM sequence reseting the DUT/DUV.
+class timer_t_sequence_reset extends timer_t_sequence;
+
+    // registration of object tools
+    `uvm_object_utils( timer_t_sequence_reset )
+
+    // Constructor - creates new instance of this class
+    function new( string name = "timer_t_sequence_reset" );
+        super.new( name );
+    endfunction: new
+
+    // body 
+    task body();
+        // set reset values, randomize() cannot be used here
+        default_RST     = RST_ACT_LEVEL;
+        default_ADDRESS = 0;
+        default_REQUEST = 0;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+        create_and_finish_item();
+    endtask: body
+endclass: timer_t_sequence_reset
+
+
+class timer_t_sequence_basic extends timer_t_sequence;
+
+    // registration of object tools
+    `uvm_object_utils( timer_t_sequence_basic )
+
+    // Constructor - creates new instance of this class
+    function new( string name = "timer_t_sequence_basic" );
+        super.new( name );
+    endfunction: new
+
+    // body - implements behavior of the reset sequence (unidirectional)
+    task body();
+        default_RST = ~RST_ACT_LEVEL;
+
+        //setting counter to 0
+        default_ADDRESS = TIMER_CNT; // 8'h00
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 32'b0;
+        create_and_finish_item();
+
+        //setting compare to 4
+        default_ADDRESS = TIMER_CMP; // 8'h04
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 32'b100;
+        create_and_finish_item();
+
+        //setting control to AUTO_RESTART
+        default_ADDRESS = TIMER_CR; // 8'h08
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 32'b01;
+        create_and_finish_item();
+
+        // just counting
+        default_ADDRESS = 32'b0;
+        default_REQUEST = 3'b0;
+        default_DATA_IN = 32'b00;
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+        create_and_finish_item();
+
+    endtask: body
+
+endclass: timer_t_sequence_basic
+
+
+class timer_t_sequence_rand extends timer_t_sequence;
+    /* INSERT YOUR CODE HERE */
+    // registration of object tools
+    `uvm_object_utils( timer_t_sequence_rand )
+
+    // default constraints for each input interface port
+
+    // Constructor - creates new instance of this class
+	  function new( string name = "timer_t_sequence_rand" );
+		    super.new( name );
+	  endfunction: new
+
+  	// body - implements behavior of the reset sequence (unidirectional)
+  	task body();
+  	  // initialize PRNG
+  	  this.srandom( SEED );
+  	  repeat ( TRANSACTION_COUNT ) begin
+  	    if ( !this.randomize() ) begin
+  	      `uvm_error( "body:", "Failed to randomize!" )
+  	    end
+  	    create_and_finish_item();
+  	  end
+  	endtask: body
+endclass: timer_t_sequence_rand
+
+
+// ---- File: uvm_fve/agents/sequencer.svh ----
+// This class manages random inputs for DUT and sends them to driver.
+class timer_t_sequencer extends uvm_sequencer #(timer_t_transaction);
+
+    // registration of component tools
+    `uvm_component_utils( timer_t_sequencer )
+
+    // Constructor - creates new instance of this class
+    function new( string name = "m_sequencer_h", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+endclass: timer_t_sequencer
+
+
+// ---- File: uvm_fve/agents/sv_agent_pkg.sv ----
+package sv_timer_t_agent_pkg;
+    import uvm_pkg::*;
+    import sv_param_pkg::*;
+
+    `include "uvm_macros.svh"
+    `include "transaction.svh"
+    `include "monitor.svh"
+    `include "coverage.svh"
+    `include "driver.svh"
+    `include "sequencer.svh"
+    `include "sequence.svh"
+    `include "agent.svh"
+    `include "new_sequence.svh"
+    `include "write_registers_sequence.svh"
+    `include "pseudo_random_sequence.svh"
+    `include "write_registers_unaligned_sequence.svh"
+endpackage: sv_timer_t_agent_pkg
+
+
+// ---- File: uvm_fve/agents/transaction.svh ----
+// This class represents transaction which contains values of output signals for 'timer'.
+class timer_t_transaction extends uvm_sequence_item;
+
+    // registration of object tools
+    `uvm_object_utils( timer_t_transaction )
+
+    // Member attributes, equivalent with interface pins
+    // make input attributes random, except for clocks
+    rand logic                  RST;
+    rand logic [ADDR_WIDTH-1:0] ADDRESS;
+    rand logic [1:0]            REQUEST;
+    rand logic [DATA_WIDTH-1:0] DATA_IN;
+
+    logic                       P_IRQ;
+    logic [2:0]                 RESPONSE;
+    logic [DATA_WIDTH-1:0]      DATA_OUT;
+
+    // Constructor - creates new instance of this class
+    function new( string name = "timer_t_transaction" );
+        super.new( name );
+    endfunction: new
+
+    // common UVM functions
+
+    // Properly copy all transaction attributes.
+    function void do_copy( uvm_object rhs );
+        timer_t_transaction rhs_;
+
+        if( !$cast(rhs_, rhs) ) begin
+            `uvm_fatal( "do_copy:", "Failed to cast transaction object." )
+            return;
+        end
+        // now copy all attributes
+        super.do_copy( rhs );
+        RST = rhs_.RST;
+        P_IRQ = rhs_.P_IRQ;
+        ADDRESS = rhs_.ADDRESS;
+        REQUEST = rhs_.REQUEST;
+        RESPONSE = rhs_.RESPONSE;
+        DATA_OUT = rhs_.DATA_OUT;
+        DATA_IN = rhs_.DATA_IN;
+    endfunction: do_copy
+
+    // Properly compare all transaction attributes representing output pins.
+    function bit do_compare( uvm_object rhs, uvm_comparer comparer );
+        timer_t_transaction rhs_;
+
+        if( !$cast(rhs_, rhs) ) begin
+            `uvm_error( "do_compare:", "Failed to cast transaction object." )
+            return 0;
+        end
+
+        // using simple equivalence operator (faster)
+        return ( super.do_compare(rhs, comparer) &&
+            (P_IRQ == rhs_.P_IRQ) &&
+            (RESPONSE == rhs_.RESPONSE) &&
+            (DATA_OUT == rhs_.DATA_OUT) );
+    endfunction: do_compare
+
+    // Convert transaction into human readable form.
+    function string convert2string();
+        string s;
+        s = $sformatf( "%s\n\tRST: 'h%0h\n\tP_IRQ: 'h%0h\n\tADDRESS: 'h%0h\n\tREQUEST: 'h%0h\n\tRESPONSE: 'h%0h\n\tDATA_OUT: 'h%0h\n\tDATA_IN: 'h%0h",
+            super.convert2string(),
+            RST,
+            P_IRQ,
+            ADDRESS,
+            REQUEST,
+            RESPONSE,
+            DATA_OUT,
+            DATA_IN );
+        return s;
+    endfunction: convert2string
+
+    // Customize what gets printed or sprinted, use the uvm_printer policy classes.
+    function void do_print( uvm_printer printer );
+        super.do_print( printer );
+        if ( printer != null ) begin
+            printer.print_int( "RST", RST, $bits(RST) );
+            printer.print_int( "REQUEST", REQUEST, $bits(REQUEST) );
+            printer.print_int( "ADDRESS", ADDRESS, $bits(ADDRESS) );
+            printer.print_int( "DATA_IN", DATA_IN, $bits(DATA_IN) );
+            printer.print_int( "RESPONSE", RESPONSE, $bits(RESPONSE) );
+            printer.print_int( "DATA_OUT", DATA_OUT, $bits(DATA_OUT) );
+            printer.print_int( "P_IRQ", P_IRQ, $bits(P_IRQ) );
+        end
+    endfunction: do_print
+
+    // Support the viewing of data objects as transactions in a waveform GUI.
+    function void do_record( uvm_recorder recorder );
+        super.do_record( recorder );
+        `uvm_record_field( "RST", RST )
+        `uvm_record_field( "P_IRQ", P_IRQ )
+        `uvm_record_field( "ADDRESS", ADDRESS )
+        `uvm_record_field( "REQUEST", REQUEST )
+        `uvm_record_field( "RESPONSE", RESPONSE )
+        `uvm_record_field( "DATA_OUT", DATA_OUT )
+        `uvm_record_field( "DATA_IN", DATA_IN )
+    endfunction: do_record
+
+endclass: timer_t_transaction
+
+// Extended transaction class
+class extended_timer_t_transaction extends timer_t_transaction;
+
+    `uvm_object_utils(extended_timer_t_transaction)
+
+    // New random variable
+    rand logic enable;
+
+    // New variable for burst length
+    rand int burst_length;
+
+    // Constructor
+    function new(string name = "extended_timer_t_transaction");
+        super.new(name);
+    endfunction : new
+
+    
+    constraint valid_burst_length {
+        burst_length inside {[1:16]};
+    }
+
+    constraint address_constraint {
+        ADDRESS[1:0] == 2'b00;
+        ADDRESS[31:0] < 32'h17;
+    }
+
+    constraint enable_implication {
+        enable -> REQUEST != 0;
+    }
+
+    constraint valid_request {
+        REQUEST inside {[0:3]};
+    }
+
+    function void do_copy(uvm_object rhs);
+        extended_timer_t_transaction rhs_;
+        if (!$cast(rhs_, rhs)) begin
+        `uvm_fatal("do_copy:", "Failed to cast transaction object.")
+        return;
+        end
+        super.do_copy(rhs);
+        enable = rhs_.enable;
+        burst_length = rhs_.burst_length;
+    endfunction : do_copy
+
+    function string convert2string();
+        string s;
+        s = $sformatf( "%s\n\tRST: 'h%0h\n\tP_IRQ: 'h%0h\n\tADDRESS: 'h%0h\n\tREQUEST: 'h%0h\n\tRESPONSE: 'h%0h\n\tDATA_OUT: 'h%0h\n\tDATA_IN: 'h%0h",
+            super.convert2string(),
+            RST,
+            P_IRQ,
+            ADDRESS,
+            REQUEST,
+            RESPONSE,
+            DATA_OUT,
+            DATA_IN );
+        return s;
+    endfunction: convert2string
+
+    function void do_print(uvm_printer printer);
+        super.do_print(printer);
+        if ( printer != null ) begin
+            printer.print_int( "RST", RST, $bits(RST) );
+            printer.print_int( "REQUEST", REQUEST, $bits(REQUEST) );
+            printer.print_int( "ADDRESS", ADDRESS, $bits(ADDRESS) );
+            printer.print_int( "DATA_IN", DATA_IN, $bits(DATA_IN) );
+            printer.print_int( "RESPONSE", RESPONSE, $bits(RESPONSE) );
+            printer.print_int( "DATA_OUT", DATA_OUT, $bits(DATA_OUT) );
+            printer.print_int( "P_IRQ", P_IRQ, $bits(P_IRQ) );
+        end
+    endfunction : do_print
+
+    // Override the do_record function to include the new variables
+    function void do_record( uvm_recorder recorder );
+        super.do_record( recorder );
+        `uvm_record_field( "RST", RST )
+        `uvm_record_field( "P_IRQ", P_IRQ )
+        `uvm_record_field( "ADDRESS", ADDRESS )
+        `uvm_record_field( "REQUEST", REQUEST )
+        `uvm_record_field( "RESPONSE", RESPONSE )
+        `uvm_record_field( "DATA_OUT", DATA_OUT )
+        `uvm_record_field( "DATA_IN", DATA_IN )
+    endfunction: do_record
+
+endclass : extended_timer_t_transaction
+
+
+// Extended transaction class
+class extended1_timer_t_transaction extends timer_t_transaction;
+
+    `uvm_object_utils(extended1_timer_t_transaction)
+
+    // New random variable
+    rand logic enable;
+
+    // New variable for burst length
+    rand int burst_length;
+
+    // Constructor
+    function new(string name = "extended1_timer_t_transaction");
+        super.new(name);
+    endfunction : new
+
+    constraint rst_inactive {
+        RST == ~RST_ACT_LEVEL;
+    }
+
+    constraint valid_request {
+        REQUEST inside {CP_REQ_NONE, CP_REQ_READ, CP_REQ_WRITE, CP_REQ_RESERVED};
+    }
+
+    constraint valid_address {
+        ADDRESS inside {
+            TIMER_CNT, TIMER_CMP, TIMER_CR, TIMER_CYCLE_L, TIMER_CYCLE_H
+        };
+    }
+
+    constraint data_in_for_mode_change {
+    // (REQUEST == CP_REQ_WRITE && ADDRESS == TIMER_CR) ->
+    //     DATA_IN dist {
+    //         TIMER_CR_DISABLED     := 1,
+    //         TIMER_CR_AUTO_RESTART := 1,
+    //         TIMER_CR_ONESHOT      := 1,
+    //         TIMER_CR_CONTINUOUS   := 1
+    //     };
+        // Alternative using 'inside':
+        DATA_IN inside {TIMER_CR_DISABLED, TIMER_CR_AUTO_RESTART, TIMER_CR_ONESHOT, TIMER_CR_CONTINUOUS};
+    }
+
+    function void do_copy(uvm_object rhs);
+        extended1_timer_t_transaction rhs_;
+        if (!$cast(rhs_, rhs)) begin
+        `uvm_fatal("do_copy:", "Failed to cast transaction object.")
+        return;
+        end
+        super.do_copy(rhs);
+        enable = rhs_.enable;
+        burst_length = rhs_.burst_length;
+    endfunction : do_copy
+
+    function string convert2string();
+        string s;
+        s = $sformatf( "%s\n\tRST: 'h%0h\n\tP_IRQ: 'h%0h\n\tADDRESS: 'h%0h\n\tREQUEST: 'h%0h\n\tRESPONSE: 'h%0h\n\tDATA_OUT: 'h%0h\n\tDATA_IN: 'h%0h",
+            super.convert2string(),
+            RST,
+            P_IRQ,
+            ADDRESS,
+            REQUEST,
+            RESPONSE,
+            DATA_OUT,
+            DATA_IN );
+        return s;
+    endfunction: convert2string
+
+    function void do_print(uvm_printer printer);
+        super.do_print(printer);
+        if ( printer != null ) begin
+            printer.print_int( "RST", RST, $bits(RST) );
+            printer.print_int( "REQUEST", REQUEST, $bits(REQUEST) );
+            printer.print_int( "ADDRESS", ADDRESS, $bits(ADDRESS) );
+            printer.print_int( "DATA_IN", DATA_IN, $bits(DATA_IN) );
+            printer.print_int( "RESPONSE", RESPONSE, $bits(RESPONSE) );
+            printer.print_int( "DATA_OUT", DATA_OUT, $bits(DATA_OUT) );
+            printer.print_int( "P_IRQ", P_IRQ, $bits(P_IRQ) );
+        end
+    endfunction : do_print
+
+    // Override the do_record function to include the new variables
+    function void do_record( uvm_recorder recorder );
+        super.do_record( recorder );
+        `uvm_record_field( "RST", RST )
+        `uvm_record_field( "P_IRQ", P_IRQ )
+        `uvm_record_field( "ADDRESS", ADDRESS )
+        `uvm_record_field( "REQUEST", REQUEST )
+        `uvm_record_field( "RESPONSE", RESPONSE )
+        `uvm_record_field( "DATA_OUT", DATA_OUT )
+        `uvm_record_field( "DATA_IN", DATA_IN )
+    endfunction: do_record
+
+endclass : extended1_timer_t_transaction
+
+
+// ---- File: uvm_fve/agents/write_registers_sequence.svh ----
+// This class represents UVM sequence reseting the DUT/DUV.
+class write_registers_sequence_reset extends timer_t_sequence;
+
+    // registration of object tools
+    `uvm_object_utils( write_registers_sequence_reset )
+
+    // Constructor - creates new instance of this class
+    function new( string name = "write_registers_sequence_reset" );
+        super.new( name );
+    endfunction: new
+
+    // body 
+    task body();
+        // set reset values, randomize() cannot be used here
+        default_RST     = RST_ACT_LEVEL;
+        default_ADDRESS = 0;
+        default_REQUEST = 0;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+        create_and_finish_item();
+    endtask: body
+endclass: write_registers_sequence_reset
+
+class write_registers_sequence_basic extends timer_t_sequence;
+
+    // registration of object tools
+    `uvm_object_utils( write_registers_sequence_basic )
+
+    // Constructor - creates new instance of this class
+    function new( string name = "write_registers_sequence_basic" );
+        super.new( name );
+    endfunction: new
+
+    // body - implements behavior of the reset sequence (unidirectional)
+    task body();
+        default_RST = ~RST_ACT_LEVEL;
+
+        // setting control register DISABLED
+        default_ADDRESS = TIMER_CR; // 8'h08
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = TIMER_CR_DISABLED;
+        create_and_finish_item();
+
+        // setting control register to AUTO_RESTART
+        default_ADDRESS = TIMER_CR; // 8'h08
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = TIMER_CR_AUTO_RESTART;
+        create_and_finish_item();
+
+        // setting control register to ONESHOT
+        default_ADDRESS = TIMER_CR; // 8'h08
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = TIMER_CR_ONESHOT;
+        create_and_finish_item();
+
+        // setting control register to CONTINUOUS
+        default_ADDRESS = TIMER_CR; // 8'h08
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = TIMER_CR_CONTINUOUS;
+        create_and_finish_item();
+
+        ///////////////////////////////////////////
+
+        // write to cnt
+        default_ADDRESS = TIMER_CNT; // 8'h00
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 32'b0;
+        create_and_finish_item();
+
+        // write to cnt
+        default_ADDRESS = TIMER_CNT; // 8'h00
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 32'b1;
+        create_and_finish_item();
+
+        // write to cnt
+        default_ADDRESS = TIMER_CNT; // 8'h00
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 32'b11111111111111111111111111111111;
+        create_and_finish_item();
+
+        // wait for overflow
+        create_and_finish_EMPTY_item();
+
+        ///////////////////////////////////////////
+
+        // write to cmp
+        default_ADDRESS = TIMER_CMP; // 8'h04
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 32'b0;
+        create_and_finish_item();
+
+        // write to cmp
+        default_ADDRESS = TIMER_CMP; // 8'h04
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 32'b1;
+        create_and_finish_item();
+
+        // write to cmp
+        default_ADDRESS = TIMER_CMP; // 8'h04
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 32'b11111111111111111111111111111111;
+        create_and_finish_item();
+
+        ///////////////////////////////////////////
+
+        // write to cmp
+        default_ADDRESS = TIMER_CMP; // 8'h00
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 32'b11111111111111111111111111111111;
+        create_and_finish_item();
+
+        // write to cnt
+        default_ADDRESS = TIMER_CNT; // 8'h00
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 32'b11111111111111111111111111111111;
+        create_and_finish_item();
+
+        // wait for irq and 
+        create_and_finish_EMPTY_item();
+
+        ///////////////////////////////////////////
+        // write to cycle_l, cycle_h should have no effect, just acknowledge
+        
+        // write to cycle_l
+        default_ADDRESS = TIMER_CYCLE_L; // 8'h00
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 42;
+        create_and_finish_item();
+
+        // write to cycle_h
+        default_ADDRESS = TIMER_CYCLE_H; // 8'h00
+        default_REQUEST = CP_REQ_WRITE; // 2'b10
+        default_DATA_IN = 42;
+        create_and_finish_item();
+
+        ///////////////////////////////////////////
+        // read from all registers
+        default_ADDRESS = TIMER_CR;
+        default_REQUEST = CP_REQ_READ;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+
+        default_ADDRESS = TIMER_CNT;
+        default_REQUEST = CP_REQ_READ;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+
+        default_ADDRESS = TIMER_CMP;
+        default_REQUEST = CP_REQ_READ;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+
+        default_ADDRESS = TIMER_CYCLE_L;
+        default_REQUEST = CP_REQ_READ;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+
+        default_ADDRESS = TIMER_CYCLE_H;
+        default_REQUEST = CP_REQ_READ;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+
+        default_ADDRESS = TIMER_CMP;
+        default_REQUEST = CP_REQ_WRITE;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+
+        default_ADDRESS = TIMER_CNT;
+        default_REQUEST = CP_REQ_WRITE;
+        default_DATA_IN = 32'hfffffffe;
+        create_and_finish_item();
+        
+        create_and_finish_EMPTY_item();
+        create_and_finish_EMPTY_item();
+        create_and_finish_EMPTY_item();
+        create_and_finish_EMPTY_item();
+    endtask: body
+
+endclass: write_registers_sequence_basic
+
+
+// ---- File: uvm_fve/agents/write_registers_unaligned_sequence.svh ----
+// This class represents UVM sequence reseting the DUT/DUV.
+class write_registers_unaligned_sequence_reset extends timer_t_sequence;
+
+    // registration of object tools
+    `uvm_object_utils( write_registers_sequence_reset )
+
+    // Constructor - creates new instance of this class
+    function new( string name = "write_registers_unaligned_sequence_reset" );
+        super.new( name );
+    endfunction: new
+
+    // body 
+    task body();
+        // set reset values, randomize() cannot be used here
+        default_RST     = RST_ACT_LEVEL;
+        default_ADDRESS = 0;
+        default_REQUEST = 0;
+        default_DATA_IN = 0;
+        create_and_finish_item();
+        create_and_finish_item();
+    endtask: body
+endclass: write_registers_unaligned_sequence_reset
+
+class write_registers_unaligned_sequence_basic extends timer_t_sequence;
+
+    // registration of object tools
+    `uvm_object_utils( write_registers_unaligned_sequence_basic )
+
+    // Constructor - creates new instance of this class
+    function new( string name = "write_registers_unaligned_sequence_basic" );
+        super.new( name );
+    endfunction: new
+
+    // body - implements behavior of the reset sequence (unidirectional)
+    task body();
+        default_RST = ~RST_ACT_LEVEL;
+
+        default_ADDRESS = 32'h01;
+        default_REQUEST = CP_REQ_WRITE;
+        default_DATA_IN = TIMER_CR_DISABLED;
+        create_and_finish_item();
+
+        default_ADDRESS = 32'h03;
+        create_and_finish_item();
+
+        default_ADDRESS = 32'h05;
+        create_and_finish_item();
+
+        default_ADDRESS = 32'h07;
+        create_and_finish_item();
+
+        default_ADDRESS = 32'h09;
+        create_and_finish_item();
+
+        default_ADDRESS = 32'h0b;
+        create_and_finish_item();
+
+        default_ADDRESS = 32'h0d;
+        create_and_finish_item();
+
+        default_ADDRESS = 32'h0f;
+        create_and_finish_item();
+
+        default_ADDRESS = 32'h11;
+        create_and_finish_item();
+
+        default_ADDRESS = 32'h13;
+        create_and_finish_item();
+
+        default_ADDRESS = 32'h15;
+        create_and_finish_item();
+
+        default_ADDRESS = 32'h17;
+        create_and_finish_item();
+
+        default_ADDRESS = 32'hfff;
+        create_and_finish_item();
+
+        default_ADDRESS = 32'hffffff;
+        create_and_finish_item();
+
+        default_ADDRESS = 32'hffffffff;
+        create_and_finish_item();
+
+    endtask: body
+
+endclass: write_registers_unaligned_sequence_basic
+
+
+// ---- File: uvm_fve/test_lib/auto_restart_test.svh ----
+// This is the default UVM test class for timer
+class timer_t_test extends timer_t_test_base;
+
+    // registration of component tools
+    `uvm_component_utils( timer_t_test )
+
+    uvm_sequence_base seq;
+    // Constructor - creates new instance of this class
+    function new( string name = "timer_t_test", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+        super.build_phase( phase );
+    endfunction: build_phase
+
+    // Run - start processing sequences
+    task run_phase( uvm_phase phase );
+        // creation of sequences
+        uvm_sequence_base rst_seq = timer_t_sequence_reset::type_id::create( "reset" );
+        uvm_sequence_base basic_seq = timer_t_sequence_basic::type_id::create( "basic" );
+
+        // prevent the phase from immediate termination
+        phase.raise_objection( this );
+
+        // starting reset sequence
+        rst_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        // starting basic sequence
+        basic_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        phase.drop_objection( this );
+    endtask: run_phase
+
+endclass: timer_t_test
+
+
+// ---- File: uvm_fve/test_lib/new_test.svh ----
+// This is the default UVM test class for timer
+class new_timer_t_test extends timer_t_test_base;
+
+    // registration of component tools
+    // registration of the given class to factory
+    // factory then create instance of the object
+    `uvm_component_utils( new_timer_t_test )
+
+    uvm_sequence_base seq;
+    // Constructor - creates new instance of this class
+    function new( string name = "new_timer_t_test", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+        super.build_phase( phase );
+    endfunction: build_phase
+
+    // Run - start processing sequences
+    task run_phase( uvm_phase phase );
+        // creation of sequences
+        uvm_sequence_base rst_seq = new_timer_t_sequence_reset::type_id::create( "reset" );
+        uvm_sequence_base basic_seq = new_timer_t_sequence_basic::type_id::create( "basic" );
+        uvm_sequence_base rand_seq = new_timer_t_sequence_rand::type_id::create( "rand" );
+        
+        // prevent the phase from immediate termination
+        phase.raise_objection( this );
+
+        // keep here to reset to initial state
+        rst_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        // starting basic sequence
+        basic_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        // reset to initial state
+        rst_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        // stating the random sequence
+        rand_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        phase.drop_objection( this );
+    endtask: run_phase
+
+endclass: new_timer_t_test
+
+
+// ---- File: uvm_fve/test_lib/pseudo_random_test.svh ----
+// This is the default UVM test class for timer
+class pseudo_random_test extends timer_t_test_base;
+
+    // registration of component tools
+    // registration of the given class to factory
+    // factory then create instance of the object
+    `uvm_component_utils( pseudo_random_test )
+
+    uvm_sequence_base seq;
+    // Constructor - creates new instance of this class
+    function new( string name = "pseudo_random_test", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+        super.build_phase( phase );
+    endfunction: build_phase
+
+    // Run - start processing sequences
+    task run_phase( uvm_phase phase );
+        // creation of sequences
+        uvm_sequence_base rst_seq = new_timer_t_sequence_reset::type_id::create( "reset" );
+        uvm_sequence_base rand_seq = pseudo_random_seq::type_id::create( "rand" );
+        
+        // prevent the phase from immediate termination
+        phase.raise_objection( this );
+
+        // reset to initial state
+        rst_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        // stating the random sequence
+        rand_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        phase.drop_objection( this );
+    endtask: run_phase
+
+endclass: pseudo_random_test
+
+
+// ---- File: uvm_fve/test_lib/reg_test.svh ----
+// This is the default UVM test class for timer
+class reg_test extends timer_t_test_base;
+
+
+
+    // registration of component tools
+    // registration of the given class to factory
+    // factory then create instance of the object
+    `uvm_component_utils( reg_test )
+
+    uvm_sequence_base seq;
+    // Constructor - creates new instance of this class
+    function new( string name = "reg_test", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+        super.build_phase( phase );
+    endfunction: build_phase
+
+    // Run - start processing sequences
+    task run_phase( uvm_phase phase );
+        // creation of sequences
+        uvm_sequence_base rst_seq = timer_t_sequence_reset::type_id::create( "reset" );
+        timer_reg_seq basic_seq = timer_reg_seq::type_id::create( "basic" );
+
+        // prevent the phase from immediate termination
+        phase.raise_objection( this );
+
+        basic_seq.m_timer_reg_block = m_env_h.m_reg_block_h;
+
+        // keep here to reset to initial state
+        rst_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        // starting basic sequence
+        basic_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        #(CLK_PERIOD * 10)
+
+        phase.drop_objection( this );
+    endtask: run_phase
+
+endclass: reg_test
+
+
+// ---- File: uvm_fve/test_lib/sv_test_pkg.sv ----
+package sv_timer_t_test_pkg;
+    import uvm_pkg::*;
+    import sv_param_pkg::*;
+    import sv_timer_t_agent_pkg::*;
+    import sv_timer_t_gm_pkg::*;
+    import sv_timer_t_env_pkg::*;
+    import registers_pkg::*;
+
+    `include "uvm_macros.svh"
+    `include "test_base.svh"
+    `include "test.svh"
+    `include "new_test.svh"
+    `include "reg_test.svh"
+    `include "pseudo_random_test.svh"
+    `include "write_registers_test.svh"
+    `include "write_registers_unaligned_test.svh"
+endpackage: sv_timer_t_test_pkg
+
+
+// ---- File: uvm_fve/test_lib/test.svh ----
+// This is the default UVM test class for timer
+class timer_t_test extends timer_t_test_base;
+
+    // registration of component tools
+    // registration of the given class to factory
+    // factory then create instance of the object
+    `uvm_component_utils( timer_t_test )
+
+    uvm_sequence_base seq;
+    // Constructor - creates new instance of this class
+    function new( string name = "timer_t_test", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+        super.build_phase( phase );
+    endfunction: build_phase
+
+    // Run - start processing sequences
+    task run_phase( uvm_phase phase );
+        // creation of sequences
+        uvm_sequence_base rst_seq = timer_t_sequence_reset::type_id::create( "reset" );
+        uvm_sequence_base basic_seq = timer_t_sequence_basic::type_id::create( "basic" );
+
+        // prevent the phase from immediate termination
+        phase.raise_objection( this );
+
+        // starting reset sequence
+        rst_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        // starting basic sequence
+        basic_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        phase.drop_objection( this );
+    endtask: run_phase
+
+endclass: timer_t_test
+
+
+// ---- File: uvm_fve/test_lib/test_base.svh ----
+// This is the base UVM test class for timer
+class timer_t_test_base extends uvm_test;
+
+    // registration of component tools
+    `uvm_component_utils( timer_t_test_base )
+
+    // member attribute with the verification environment
+    timer_t_env m_timer_t_env_h;
+    // same handler as the one above, just different name
+    timer_t_env m_env_h;
+
+    // Constructor - creates new instance of this class
+    function new( string name = "timer_t_test_base", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+        super.build_phase( phase );
+        m_timer_t_env_h = timer_t_env::type_id::create( "m_timer_t_env_h", this );
+        m_env_h = m_timer_t_env_h;
+    endfunction: build_phase
+
+endclass: timer_t_test_base
+
+
+// ---- File: uvm_fve/test_lib/write_registers_test.svh ----
+// This is the default UVM test class for timer
+class write_registers_test extends timer_t_test_base;
+
+    // registration of component tools
+    // registration of the given class to factory
+    // factory then create instance of the object
+    `uvm_component_utils( write_registers_test )
+
+    uvm_sequence_base seq;
+    // Constructor - creates new instance of this class
+    function new( string name = "write_registers_test", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+        super.build_phase( phase );
+    endfunction: build_phase
+
+    // Run - start processing sequences
+    task run_phase( uvm_phase phase );
+        // creation of sequences
+        uvm_sequence_base rst_seq = write_registers_sequence_reset::type_id::create( "reset" );
+        uvm_sequence_base write_regs_seq = write_registers_sequence_basic::type_id::create( "basic" );
+        // uvm_sequence_base rand_seq = new_timer_t_sequence_rand::type_id::create( "rand" );
+        
+        // prevent the phase from immediate termination
+        phase.raise_objection( this );
+
+        // keep here to reset to initial state
+        rst_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        // starting basic sequence
+        write_regs_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        phase.drop_objection( this );
+    endtask: run_phase
+
+endclass: write_registers_test
+
+
+// ---- File: uvm_fve/test_lib/write_registers_unaligned_test.svh ----
+// This is the default UVM test class for timer
+class write_registers_unaligned_test extends timer_t_test_base;
+
+    // registration of component tools
+    // registration of the given class to factory
+    // factory then create instance of the object
+    `uvm_component_utils( write_registers_unaligned_test )
+
+    uvm_sequence_base seq;
+    // Constructor - creates new instance of this class
+    function new( string name = "write_registers_unaligned_test", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+        super.build_phase( phase );
+    endfunction: build_phase
+
+    // Run - start processing sequences
+    task run_phase( uvm_phase phase );
+        // creation of sequences
+        uvm_sequence_base rst_seq = write_registers_unaligned_sequence_reset::type_id::create( "reset" );
+        uvm_sequence_base write_regs_seq = write_registers_unaligned_sequence_basic::type_id::create( "basic" );
+        // uvm_sequence_base rand_seq = new_timer_t_sequence_rand::type_id::create( "rand" );
+        
+        // prevent the phase from immediate termination
+        phase.raise_objection( this );
+
+        // keep here to reset to initial state
+        rst_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        // starting basic sequence
+        write_regs_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
+
+        phase.drop_objection( this );
+    endtask: run_phase
+
+endclass: write_registers_unaligned_test
+
+
+// ---- File: uvm_fve/regmodel/reg_adapter.svh ----
+class reg_adapter extends uvm_reg_adapter;
+
+  `uvm_object_utils(reg_adapter)
+
+ /*
+  * Extern/pure tasks and functions declarations
+  */
+  extern function new(string name = "reg_adapter");
+  extern function uvm_sequence_item reg2bus(const ref uvm_reg_bus_op rw);
+  extern function void bus2reg(uvm_sequence_item bus_item, ref uvm_reg_bus_op rw);
+endclass : reg_adapter 
+
+/**
+ * Constructor - creates new instance of this class
+ * @param name - instance name
+ */
+function reg_adapter::new(string name = "reg_adapter");
+   super.new(name);
+endfunction : new
+
+/**
+ * reg2bus - Creating bus transaction from register transaction.
+ * @param rw - register transaction
+ */
+function uvm_sequence_item reg_adapter::reg2bus(const ref uvm_reg_bus_op rw);
+  timer_t_transaction trans = timer_t_transaction::type_id::create("trans");
+  trans.REQUEST = (rw.kind == UVM_READ) ? CP_REQ_READ : CP_REQ_WRITE;
+  trans.ADDRESS = rw.addr;
+  trans.DATA_IN = (rw.kind == UVM_WRITE) ? rw.data : 0;
+  trans.DATA_OUT = (rw.kind == UVM_READ) ? rw.data : 0;
+  
+  `uvm_info(get_type_name(), $sformatf("reg2bus rw::kind: %s, addr: 0x%0h, data: 0x%0h, status: %s", rw.kind.name(), rw.addr, rw.data, rw.status), UVM_LOW)
+  return trans;
+endfunction : reg2bus
+
+/**
+ * reg2bus - Creating register transaction from bus transaction.
+ * @param rw - register transaction
+ * @param bus_item - bus transaction
+ */
+function void reg_adapter::bus2reg(uvm_sequence_item bus_item, ref uvm_reg_bus_op rw);
+  timer_t_transaction trans;
+  if (!$cast(trans, bus_item))
+    `uvm_fatal(get_type_name(),"Provided bus_item is not of the correct type")
+  else begin
+     `uvm_info("bus2reg", trans.convert2string(), UVM_HIGH);
+  end
+  
+  rw.kind = (trans.REQUEST == CP_REQ_WRITE) ? UVM_WRITE : UVM_READ;
+  rw.addr = trans.ADDRESS;
+  rw.data = trans.DATA_IN;
+  rw.status = UVM_IS_OK;
+  
+  `uvm_info(get_type_name(), $sformatf("bus2reg rw::kind: %s, addr: 0x%0h, data: 0x%0h, status: %s", rw.kind.name(), rw.addr, rw.data, rw.status), UVM_LOW)
+endfunction : bus2reg
+
+
+
+// ---- File: uvm_fve/regmodel/registers_pkg.sv ----
+package registers_pkg;
+  
+  `include "uvm_macros.svh"
+  
+  import uvm_pkg::*;
+  import sv_timer_t_agent_pkg::*;
+  import sv_param_pkg::*;
+    
+  `include "timer_reg_block.svh"
+  `include "reg_adapter.svh"
+  `include "timer_reg_seq.svh"
+
+endpackage : registers_pkg
+
+
+// ---- File: uvm_fve/regmodel/timer_reg_block.svh ----
+//////////////////////////////////////////////////////////////////////////////
+// Register definition
+//////////////////////////////////////////////////////////////////////////////
+class TIMER_CTRL_t extends uvm_reg;
+  `uvm_object_utils(TIMER_CTRL_t)
+
+  rand uvm_reg_field timer_mode;
+  
+  function new(input string name="TIMER_CTRL_t");
+    super.new(name, 16, build_coverage(UVM_CVR_FIELD_VALS));
+  endfunction : new
+
+  virtual function void build();
+    timer_mode = uvm_reg_field::type_id::create("timer_mode");
+    
+    /*
+    function void configure(		uvm_reg 	parent,
+                                int 	unsigned 	size,
+                                int 	unsigned 	lsb_pos,
+                                string 	access,
+                                bit 	volatile,
+                                uvm_reg_data_t 	reset,
+                                bit 	has_reset,
+                                bit 	is_rand,
+                                bit 	individually_accessible	)*/
+
+    timer_mode.configure(this, 2, 0, "RW", 0, 0, 0, 1, 1);
+  endfunction
+
+endclass : TIMER_CTRL_t
+
+class TIMER_CNT_t extends uvm_reg;
+  `uvm_object_utils(TIMER_CNT_t)
+
+  rand uvm_reg_field timer_cnt_reg;
+  
+  function new(input string name="TIMER_CNT_t");
+    super.new(name, 32, build_coverage(UVM_CVR_FIELD_VALS));
+  endfunction : new
+
+  virtual function void build();
+    timer_cnt_reg = uvm_reg_field::type_id::create("timer_cnt_reg");
+    
+    /*
+    function void configure(		uvm_reg 	parent,
+                                int 	unsigned 	size,
+                                int 	unsigned 	lsb_pos,
+                                string 	access,
+                                bit 	volatile,
+                                uvm_reg_data_t 	reset,
+                                bit 	has_reset,
+                                bit 	is_rand,
+                                bit 	individually_accessible	)*/
+
+    timer_cnt_reg.configure(this, 4, 0, "RW", 0, 0, 0, 1, 1);
+  endfunction
+
+endclass : TIMER_CNT_t
+
+//////////////////////////////////////////////////////////////////////////////
+// Register block definition
+//////////////////////////////////////////////////////////////////////////////
+class timer_reg_block extends uvm_reg_block;
+  `uvm_object_utils(timer_reg_block)
+
+  rand TIMER_CTRL_t TIMER_CTRL;
+  rand TIMER_CNT_t TIMER_CNT;
+    
+  function new(input string name="timer_reg_block");
+    super.new(name, UVM_NO_COVERAGE);
+  endfunction : new
+
+  virtual function void build();
+    // Now create all registers
+    TIMER_CTRL = TIMER_CTRL_t::type_id::create("TIMER_CTRL", , get_full_name());
+    TIMER_CNT = TIMER_CNT_t::type_id::create("TIMER_CNT", , get_full_name());
+    
+    // Now build the registers. Set parent and hdl_paths
+    TIMER_CTRL.configure(this, null, "");
+    TIMER_CTRL.build();
+
+    TIMER_CNT.configure(this, null, "");
+    TIMER_CNT.build();
+    
+    // Now define address mappings
+    default_map = create_map("default_map", 0, 8, UVM_LITTLE_ENDIAN);
+    default_map.add_reg(TIMER_CNT, `UVM_REG_ADDR_WIDTH'h0, "RW");
+    default_map.add_reg(TIMER_CTRL, `UVM_REG_ADDR_WIDTH'h8, "RW");
+
+  endfunction
+
+endclass : timer_reg_block
+ 
+
+
+// ---- File: uvm_fve/regmodel/timer_reg_seq.svh ----
+class timer_reg_seq extends uvm_reg_sequence;
+  `uvm_object_utils(timer_reg_seq)
+
+  /*
+   * Class properties
+   */
+  
+   // RAL, status, data
+  timer_reg_block m_timer_reg_block; 
+  uvm_reg_data_t value;
+  uvm_status_e   status;
+
+  /*
+   * Class item methods
+   */
+  extern function new(string name = "timer_reg_seq");
+  extern virtual task body();
+  extern task timer_set_mode(bit [1:0] mode);
+  extern task timer_set_cnt(bit [31:0] cnt);
+  extern function void check_status();
+endclass : timer_reg_seq
+
+/*
+ * Constructor for timer_reg_seq
+ * @param name - instance name
+ */
+function timer_reg_seq::new(string name = "timer_reg_seq");
+  super.new(name);
+endfunction : new
+
+/*
+ * Main body task
+ */
+task timer_reg_seq::body();
+  timer_set_mode(2'b01);
+
+  timer_set_cnt(32'h000000FF);
+endtask : body
+
+/* 
+ * timer_set_mode - Setting mode for timer
+ * @param nvm_wr_en - enabling bit
+ */
+task timer_reg_seq::timer_set_mode(bit [1:0] mode);
+  m_timer_reg_block.TIMER_CTRL.write(status, mode);
+  check_status();
+endtask : timer_set_mode
+
+task timer_reg_seq::timer_set_cnt(bit [31:0] cnt);
+  m_timer_reg_block.TIMER_CNT.write(status, cnt);
+  check_status();
+endtask : timer_set_cnt
+
+/*
+ * check_status - checking status of RAL operations
+ */
+function void timer_reg_seq::check_status();
+  if (status == UVM_NOT_OK)
+    `uvm_fatal(get_type_name(), "RAL access status returned UVM_NOT_OK.")
+endfunction: check_status
+
+
+// ---- File: uvm_fve/env_lib/env.svh ----
+// This class represents the main parts of the verification environment.
+class timer_t_env extends uvm_env;
+
+    // registration of component tools
+    `uvm_component_utils( timer_t_env )
+
+    // main sub-components
+    timer_t_agent m_timer_t_agent_h;
+    timer_t_scoreboard m_scoreboard_h;
+    // golden (reference) model
+    timer_t_gm m_gold_h;
+
+    timer_reg_block m_reg_block_h;
+    reg_adapter m_reg_adapter_h;
+
+    // Constructor - creates new instance of this class
+    function new( string name = "m_env_h", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+        super.build_phase( phase );
+        m_timer_t_agent_h = timer_t_agent::type_id::create( "m_timer_t_agent_h", this );
+        m_scoreboard_h = timer_t_scoreboard::type_id::create( "m_scoreboard_h", this );
+        m_gold_h = timer_t_gm::type_id::create( "m_gold_h", this );
+
+        m_reg_block_h = timer_reg_block::type_id::create( "m_reg_block_h", this );
+        m_reg_block_h.configure();
+        m_reg_block_h.build();
+        m_reg_block_h.lock_model();
+
+        m_reg_adapter_h = reg_adapter::type_id::create( "m_reg_adapter_h", this );
+    endfunction: build_phase
+
+    // Connect - create interconnection between child components
+    function void connect_phase( uvm_phase phase );
+        super.connect_phase( phase );
+        // agent monitor => scoreboard (DUT outputs)
+        m_timer_t_agent_h.analysis_port_monitor.connect( m_scoreboard_h.dut_analysis_export );
+        // agent driver => golden reference model (DUT inputs)
+        m_timer_t_agent_h.analysis_port_driver.connect( m_gold_h.analysis_export );
+        // golden reference model => scoreboard (GM outputs)
+        m_gold_h.timer_t_analysis_port.connect( m_scoreboard_h.gold_analysis_export );
+        // now initialize scoreboard attributes
+        m_scoreboard_h.m_gold_h = m_gold_h;
+
+        m_reg_block_h.default_map.set_sequencer(m_timer_t_agent_h.m_sequencer_h, m_reg_adapter_h);
+        m_reg_block_h.default_map.set_auto_predict(0);
+        m_reg_block_h.default_map.set_check_on_read(1);
+
+    endfunction: connect_phase
+
+endclass: timer_t_env
+
+
+// ---- File: uvm_fve/env_lib/scoreboard.svh ----
+// analysis implementations to support input from many places
+// makro automaticky prepoji exporty s analytickymi fifami
+// see write_dut, write_gold - spracovanie prijatych dat
+// monitor odosle data do sb, 
+`uvm_analysis_imp_decl( _dut )
+`uvm_analysis_imp_decl( _gold )
+
+// Comparison class
+class timer_t_scoreboard extends uvm_scoreboard;
+
+    // registration of component tools
+    `uvm_component_utils( timer_t_scoreboard )
+
+    // analysis components
+    uvm_analysis_imp_dut #(timer_t_transaction, timer_t_scoreboard) dut_analysis_export;
+    uvm_analysis_imp_gold #(timer_t_transaction, timer_t_scoreboard) gold_analysis_export;
+    // local queues to store all transactions
+    local timer_t_transaction m_dut_fifo[$];
+    local timer_t_transaction m_gold_fifo[$];
+    // golden reference model handle also assigned by parent component
+    timer_t_gm m_gold_h;
+    // stores the final report message
+    local string m_report_msg;
+    // counts miscompares during run_phase and check_phase
+    local int unsigned m_miscompares = 0;
+    // counts all comparisons during run_phase and check_phase
+    local int unsigned m_total = 0;
+
+    // Constructor - creates new instance of this class
+    function new( string name = "m_scoreboard_h", uvm_component parent = null );
+        super.new( name, parent );
+    endfunction: new
+
+    // Build - instantiates child components
+    function void build_phase( uvm_phase phase );
+        super.build_phase( phase );
+        // data pritecu do analytickeho exportu
+        dut_analysis_export = new( "dut_analysis_export", this );
+        gold_analysis_export = new( "gold_analysis_export", this );
+    endfunction: build_phase
+
+
+
+    // Write - store all transactions from DUT ports
+    function void write_dut( timer_t_transaction t );
+        store_item_cnd( m_dut_fifo, t );
+        compare_transaction();
+    endfunction: write_dut
+
+    // Write - store all transaction from golden reference model ports
+    function void write_gold( timer_t_transaction t );
+        store_item_cnd( m_gold_fifo, t );
+        compare_transaction();
+    endfunction: write_gold
+
+    // comparison in every clock cycle
+    function void compare_transaction();
+        // we are comparing on-the-fly, compare if both fifos are not empty
+        // does not matter if either one is faster
+        if ( m_gold_fifo.size() && m_dut_fifo.size() ) begin
+            timer_t_transaction dut;
+            timer_t_transaction gold;
+            dut = m_dut_fifo.pop_front();
+            gold = m_gold_fifo.pop_front();
+            if ( !gold.compare(dut) ) begin
+               `uvm_error( "Comparison in SCOREBOARD:", $sformatf("Found miscompare between GM and DUT:\n%s\n%s\n",   gold.sprint(), dut.sprint()) )
+                m_miscompares += 1;
+            end
+        m_total += 1;
+        end
+    endfunction: compare_transaction
+
+    // Store - store transaction into given queue if given transaction should be
+    // compared with its opposite during the check phase.
+    local function automatic void store_item_cnd( ref timer_t_transaction queue[$],
+        timer_t_transaction t );
+        queue.push_back( t );
+    endfunction: store_item_cnd
+
+    // Check - compare DUT and golden reference model
+    function void check_phase( uvm_phase phase );
+        if ( m_gold_fifo.size() != m_dut_fifo.size() ) begin
+            `uvm_fatal( "check:", $sformatf("Different number of output transactions: DUT=%0d, GOLD=%0d.",
+                m_dut_fifo.size(),
+                m_gold_fifo.size()) )
+        end
+    endfunction: check_phase
+
+    // Report - generate final report (success/failure)
+    function void report_phase( uvm_phase phase );
+        `uvm_info( "FINAL STATUS", $sformatf("The result for timer VERIFICATION is %0s, %0d/%0d , mismatches!",
+            (m_miscompares == 0 ? "OK" : "FAIL"),
+            m_miscompares,
+            m_total),
+            UVM_LOW )
+    endfunction: report_phase
+
+endclass: timer_t_scoreboard
+
+
+// ---- File: uvm_fve/env_lib/sv_env_pkg.sv ----
+package sv_timer_t_env_pkg;
+    import uvm_pkg::*;
+    import sv_param_pkg::*;
+    import sv_timer_t_agent_pkg::*;
+    import sv_timer_t_gm_pkg::*;
+    import registers_pkg::*;
+
+    `include "uvm_macros.svh"
+    `include "scoreboard.svh"
+    `include "env.svh"
+endpackage: sv_timer_t_env_pkg
+
+

@@ -81,21 +81,23 @@ begin
     -- considering requests: read, write
     -- address range checked during request phase
     -- address must be aligned to 32b words
-    bus_resp_d <=
-        CP_RSP_IDLE     when ((unsigned(REQUEST) /= CP_REQ_READ) and 
-                              (unsigned(REQUEST) /= CP_REQ_WRITE)) else
-        CP_RSP_ERROR     when (unsigned(REQUEST) = CP_REQ_RESERVED) else
-        CP_RSP_UNALIGNED when (ADDRESS(1 downto 0) /= "00") else
-        CP_RSP_OOR       when (unsigned(ADDRESS(ADDR_WIDTH - 1 downto TIMER_ADDR_SPACE_BITS)) /= 0) else 
-        CP_RSP_ACK;
+    -- bus_resp_d <=
+    --     CP_RSP_IDLE     when ((unsigned(REQUEST) /= CP_REQ_READ) and 
+    --                           (unsigned(REQUEST) /= CP_REQ_WRITE)) else
+    --     CP_RSP_ERROR     when (unsigned(REQUEST) = CP_REQ_RESERVED) else
+    --     CP_RSP_UNALIGNED when (ADDRESS(1 downto 0) /= "00") else
+    --     CP_RSP_OOR       when (unsigned(ADDRESS(ADDR_WIDTH - 1 downto TIMER_ADDR_SPACE_BITS)) /= 0) else 
+    --     CP_RSP_ACK;
     
     -- corrected
-    -- bus_resp_d <=
-    --     CP_RSP_IDLE      when (unsigned(REQUEST) = CP_REQ_NONE) else
-    --     CP_RSP_ERROR     when (unsigned(REQUEST) = CP_REQ_RESERVED) else
-    --     CP_RSP_OOR       when (unsigned(ADDRESS(ADDR_WIDTH - 1 downto TIMER_ADDR_SPACE_BITS)) /= 0) else
-    --     CP_RSP_UNALIGNED when (ADDRESS(1 downto 0) /= "00") else
-    --     CP_RSP_ACK;
+    bus_resp_d <=
+    CP_RSP_IDLE      when unsigned(REQUEST) = CP_REQ_NONE       else
+    CP_RSP_ERROR     when unsigned(REQUEST) = CP_REQ_RESERVED   else
+    CP_RSP_OOR       when unsigned(
+                        ADDRESS(TIMER_ADDR_SPACE_BITS-1 downto 0)
+                      ) > unsigned(TIMER_CYCLE_H)               else
+    CP_RSP_UNALIGNED when ADDRESS(1 downto 0) /= "00"            else
+    CP_RSP_ACK;
 
     ----------------------------------------------------------------------------------
     -- setting of help signals
