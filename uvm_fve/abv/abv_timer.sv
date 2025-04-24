@@ -70,24 +70,33 @@ property prReadWriteUnaligned;
      (REQUEST === CP_REQ_READ || REQUEST === CP_REQ_WRITE) && (ADDRESS <= 8'h14) && (ADDRESS[1:0] != 2'b00)
         |-> ##1 (RESPONSE === CP_RSP_UNALIGNED);
 endproperty
-
 property checkWriteReadSameAddr;
   logic [ADDR_WIDTH-1:0] v_addr;
   logic [DATA_WIDTH-1:0] v_data;
 
   @(posedge CLK)
   disable iff ($isunknown(RST) || RST === RST_ACT_LEVEL)
-    (REQUEST === CP_REQ_WRITE && (ADDRESS === TIMER_CR || ADDRESS === TIMER_CMP), v_addr = ADDRESS, v_data = DATA_IN)
-
-      ##1 (REQUEST === CP_REQ_READ 
-            && ADDRESS === v_addr)
-
-    |-> ##1 (DATA_OUT === v_data);
+    // 1) write cycle: RST must be known & inactive
+    (REQUEST == CP_REQ_WRITE
+       && (ADDRESS == TIMER_CNT || ADDRESS == TIMER_CMP || 
+          (ADDRESS == TIMER_CR && DATA_IN <= TIMER_CR_CONTINUOUS)),
+     v_addr  = ADDRESS,
+     v_data  = DATA_IN)
+    // 2) read cycle: again RST known & inactive
+    ##1 (
+      REQUEST == CP_REQ_READ
+      && ADDRESS == v_addr
+    )
+  // 3) data‐out check one cycle later: still RST known & inactive
+  |-> ##1 (
+      DATA_OUT == v_data
+    );
 endproperty
 
 // does not apply if the address is OOR or UNALIGNED
 property ackAfterCorrectAddr;
     @(posedge CLK)
+    disable iff ($isunknown(RST) || RST === RST_ACT_LEVEL)
     ( (REQUEST === CP_REQ_READ || REQUEST === CP_REQ_WRITE) && ADDRESS <= 8'h14 && ADDRESS[1:0] === 2'b00)
     |-> ##1
     ( RESPONSE === CP_RSP_ACK );
@@ -102,6 +111,7 @@ endproperty
 
 property errorResponseToResReq;
     @(posedge CLK)
+    disable iff ($isunknown(RST) || RST === RST_ACT_LEVEL)
     ( (REQUEST === CP_REQ_RESERVED) )
     |-> ##1
     ( RESPONSE === CP_RSP_ERROR );
@@ -113,7 +123,9 @@ property noWaitResponse;
 endproperty
 
 property irqAfterCmpCntMatch;
-    @(posedge CLK iff ctrl_reg_d != TIMER_CR_DISABLED) cnt_reg_d === cmp_reg_d
+    @(posedge CLK)
+    disable iff ($isunknown(RST) || RST === RST_ACT_LEVEL)
+    ((ctrl_reg_d != TIMER_CR_DISABLED) && (cnt_reg_d === cmp_reg_d))
         |-> ##1 (P_IRQ === 1);
 endproperty
 
@@ -128,7 +140,9 @@ endproperty
 //      we are changing mode
 //      OR we are writing another value to CNT
 property incCntAfterCmpCntMatchContinuous;
-    @(posedge CLK) ((cnt_reg_d === cmp_reg_d) && (ctrl_reg_d === TIMER_CR_CONTINUOUS)
+    @(posedge CLK)
+    disable iff ($isunknown(RST) || RST === RST_ACT_LEVEL)
+    ((cnt_reg_d === cmp_reg_d) && (ctrl_reg_d === TIMER_CR_CONTINUOUS)
         && !((REQUEST == CP_REQ_WRITE && ADDRESS == TIMER_CR && DATA_IN != TIMER_CR_DISABLED) || (REQUEST == CP_REQ_WRITE && ADDRESS == TIMER_CNT)) )
         |-> ##1 ( cnt_reg_d === $past(cnt_reg_d) + 1 );
 endproperty
@@ -142,13 +156,17 @@ endproperty
 
 // must be the current clock value
 property cycleLRead;
-    @(posedge CLK) (ADDRESS === TIMER_CYCLE_L && REQUEST === CP_REQ_READ)
+    @(posedge CLK)
+    disable iff ($isunknown(RST) || RST === RST_ACT_LEVEL)
+    (ADDRESS === TIMER_CYCLE_L && REQUEST === CP_REQ_READ)
         |-> ##1 (DATA_OUT === cycle_cnt[31:0]);
 endproperty
 
 // must be the current clock value
 property cycleHRead;
-    @(posedge CLK) (ADDRESS === TIMER_CYCLE_H && REQUEST === CP_REQ_READ)
+    @(posedge CLK)
+    disable iff ($isunknown(RST) || RST === RST_ACT_LEVEL)
+    (ADDRESS === TIMER_CYCLE_H && REQUEST === CP_REQ_READ)
         |-> ##1 (DATA_OUT === cycle_cnt[63:32]);
 endproperty
 

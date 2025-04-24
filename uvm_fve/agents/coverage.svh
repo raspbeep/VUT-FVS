@@ -10,6 +10,7 @@ class timer_t_coverage extends uvm_subscriber #(timer_t_transaction);
 
     // Covergroup definition
     covergroup FunctionalCoverage( string inst );
+        option.per_instance = 1;
     
         // 1 Coverpoint a biny pro módy timeru, abychom měli jistotu, že se každý mód aktivoval alespoň jednou. Váha 0 (pomocný coverpoint pro cross).
         modes: coverpoint ivif.ctrl_reg_d {

@@ -1,2 +1,2 @@
-var g_data = {"data":[{"n":"work.abv_timer","id":14,"zf":1,"tc":50.00,"d":50.00,"a":50.00},{"n":"work.sv_timer_t_agent_pkg","id":5,"zf":1,"tc":63.19,"g":63.19},{"n":"work.timer(rtl)","id":13,"zf":1,"tc":33.17,"s":58.62,"b":40.90,"fc":0.00}]};
+var g_data = {"data":[{"n":"work.abv_timer","id":15,"zf":1,"tc":100.00,"d":100.00,"a":100.00},{"n":"work.sv_timer_t_agent_pkg","id":5,"zf":1,"tc":100.00,"g":100.00},{"n":"work.timer(rtl)","id":13,"zf":1,"tc":100.00,"s":100.00,"b":100.00,"fc":100.00}]};
 processDuData(g_data);

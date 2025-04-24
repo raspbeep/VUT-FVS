@@ -54,6 +54,7 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
     
     static logic resetting_this_clock = 0;
     static logic disabling_this_clock = 0;
+    static logic set_mode_disabled_this_clock = 0;
 
     // base name prefix for created transactions
     string m_name = "gold";
@@ -113,6 +114,10 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
             response_next_clock = 0;
             response_next_clock_value = CP_RSP_IDLE;
             cycle_cnt_reset_next_clock = 1;
+            ctrl_reg_next_clock = 0;
+            data_out_next_clock = 0;
+            data_out_prev = 0;
+
             timer_cnt = 0;
             timer_cmp = 0;
 
@@ -145,8 +150,11 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
                 t.DATA_OUT = data_out_next_clock_value;
                 data_out_prev = data_out_next_clock_value;
             end
+        // end else if (t.RESPONSE === CP_RSP_IDLE || t.RESPONSE === CP_RSP_ERROR) begin
+            
         end else begin
-            t.DATA_OUT = data_out_prev;
+            t.DATA_OUT = 0;
+            data_out_prev = 0;
         end
 
         if (disable_timer_next_clock == 1) begin
@@ -158,6 +166,10 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
             ctrl_reg_next_clock = 0;
             if (ctrl_reg == TIMER_CR_DISABLED && ctrl_reg_next_clock_value != TIMER_CR_DISABLED && !disabling_this_clock) begin
                 start_counting_next_clock = 1;
+            end
+
+            if (ctrl_reg !== TIMER_CR_DISABLED && ctrl_reg_next_clock_value == TIMER_CR_DISABLED) begin
+                set_mode_disabled_this_clock = 1;
             end
 
             ctrl_reg = ctrl_reg_next_clock_value;
@@ -174,7 +186,7 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
 
         // -------------------------------------------------
         // inkrementacia cnt ak nie je disabled
-        if (ctrl_reg != TIMER_CR_DISABLED && !start_counting_next_clock && !reset_cnt_this_clock) begin
+        if ((ctrl_reg != TIMER_CR_DISABLED && !start_counting_next_clock && !reset_cnt_this_clock) || (set_mode_disabled_this_clock && !reset_cnt_this_clock)) begin
             if (timer_cnt == 32'hffffffff) begin
                 timer_cnt = 0;
             end else begin
@@ -183,6 +195,7 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
         end
         start_counting_next_clock = 0;
         reset_cnt_this_clock = 0;
+        set_mode_disabled_this_clock = 0;
 
         // -------------------------------------------------
         // prikaz na zapis do cnt/cmp
@@ -291,7 +304,16 @@ class timer_t_gm extends uvm_subscriber #(timer_t_transaction);//uvm_component;
                                 // no data out value, we need the read it next clock
                             end
                         endcase;
-                        data_out_next_clock = 1;
+                        // reading from 8'b0C is undefined
+                        if (
+                            t.ADDRESS == TIMER_CNT     ||
+                            t.ADDRESS == TIMER_CMP     ||
+                            t.ADDRESS == TIMER_CR      ||
+                            t.ADDRESS == TIMER_CYCLE_L ||
+                            t.ADDRESS == TIMER_CYCLE_H
+                        ) begin
+                            data_out_next_clock = 1;
+                        end
                         response_next_clock = 1;
                         response_next_clock_value = CP_RSP_ACK;
                     end
