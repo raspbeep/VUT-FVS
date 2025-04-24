@@ -33,10 +33,10 @@ class new_timer_t_test extends timer_t_test_base;
         // starting basic sequence
         basic_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
 
-        // reset to initial state
+        // // reset to initial state
         rst_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
 
-        // stating the random sequence
+        // // stating the random sequence
         rand_seq.start( m_env_h.m_timer_t_agent_h.m_sequencer_h );
 
         phase.drop_objection( this );

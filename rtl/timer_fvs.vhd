@@ -91,12 +91,12 @@ begin
     
     -- corrected
     bus_resp_d <=
-    CP_RSP_IDLE      when unsigned(REQUEST) = CP_REQ_NONE       else
-    CP_RSP_ERROR     when unsigned(REQUEST) = CP_REQ_RESERVED   else
+    CP_RSP_IDLE      when unsigned(REQUEST) = CP_REQ_NONE          else
+    CP_RSP_ERROR     when unsigned(REQUEST) = CP_REQ_RESERVED      else
     CP_RSP_OOR       when unsigned(
                         ADDRESS(TIMER_ADDR_SPACE_BITS-1 downto 0)
-                      ) > unsigned(TIMER_CYCLE_H)               else
-    CP_RSP_UNALIGNED when ADDRESS(1 downto 0) /= "00"            else
+                      ) > unsigned(TIMER_CYCLE_H)                  else
+    CP_RSP_UNALIGNED when ADDRESS(1 downto 0) /= "00"              else
     CP_RSP_ACK;
 
     ----------------------------------------------------------------------------------

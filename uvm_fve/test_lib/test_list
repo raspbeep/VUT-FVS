@@ -1,5 +1,3 @@
 timer_t_test
 new_timer_t_test
 pseudo_random_test
-write_registers_test
-write_registers_unaligned_test

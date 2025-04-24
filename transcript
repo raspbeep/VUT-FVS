@@ -1,7 +1,0 @@
-# vsim -c coverage report -html -output covhtmlreport -annotate -details -assert -directive -cvg -code bcefst -threshL 50 -threshH 90; quit -f 
-# Start time: 12:10:17 on Apr 14,2025
-# ** Error (suppressible): (vsim-19) Failed to access library 'work' at "work".
-# No such file or directory. (errno = ENOENT)
-# Error loading design
-# End time: 12:10:17 on Apr 14,2025, Elapsed time: 0:00:00
-# Errors: 1, Warnings: 0

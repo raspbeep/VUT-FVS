@@ -1,17 +1,12 @@
-// This class represents UVM sequence reseting the DUT/DUV.
 class new_timer_t_sequence_reset extends timer_t_sequence;
 
-    // registration of object tools
     `uvm_object_utils( new_timer_t_sequence_reset )
 
-    // Constructor - creates new instance of this class
     function new( string name = "new_timer_t_sequence_reset" );
         super.new( name );
     endfunction: new
 
-    // body 
     task body();
-        // set reset values, randomize() cannot be used here
         default_RST     = RST_ACT_LEVEL;
         default_ADDRESS = 0;
         default_REQUEST = 0;
@@ -23,15 +18,12 @@ endclass: new_timer_t_sequence_reset
 
 class new_timer_t_sequence_basic extends timer_t_sequence;
 
-    // registration of object tools
     `uvm_object_utils( new_timer_t_sequence_basic )
-
-    // Constructor - creates new instance of this class
+    
     function new( string name = "new_timer_t_sequence_basic" );
         super.new( name );
     endfunction: new
 
-    // body - implements behavior of the reset sequence (unidirectional)
     task body();
         default_RST = ~RST_ACT_LEVEL;
 

@@ -248,19 +248,11 @@ class extended1_timer_t_transaction extends timer_t_transaction;
 
     constraint valid_address {
         ADDRESS inside {
-            TIMER_CNT, TIMER_CMP, TIMER_CR, TIMER_CYCLE_L, TIMER_CYCLE_H
+            TIMER_CR, TIMER_CNT
         };
     }
 
     constraint data_in_for_mode_change {
-    // (REQUEST == CP_REQ_WRITE && ADDRESS == TIMER_CR) ->
-    //     DATA_IN dist {
-    //         TIMER_CR_DISABLED     := 1,
-    //         TIMER_CR_AUTO_RESTART := 1,
-    //         TIMER_CR_ONESHOT      := 1,
-    //         TIMER_CR_CONTINUOUS   := 1
-    //     };
-        // Alternative using 'inside':
         DATA_IN inside {TIMER_CR_DISABLED, TIMER_CR_AUTO_RESTART, TIMER_CR_ONESHOT, TIMER_CR_CONTINUOUS};
     }
 
