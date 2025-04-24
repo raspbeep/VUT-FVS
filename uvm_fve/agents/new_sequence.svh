@@ -146,32 +146,6 @@ class random1_timer_t_sequence extends uvm_sequence #(extended1_timer_t_transact
     endfunction: new
 endclass: random1_timer_t_sequence
 
-// class new_timer_t_sequence_rand extends timer_t_sequence;
-//     // registration of object tools
-//     `uvm_object_utils( new_timer_t_sequence_rand )
-
-//     // default constraints for each input interface port
-
-//     // Constructor - creates new instance of this class
-// 	  function new( string name = "new_timer_t_sequence_rand" );
-// 		    super.new( name );
-// 	  endfunction: new
-
-//   	// body - implements behavior of the reset sequence (unidirectional)
-//   	task body();
-//   	  // initialize PRNG
-//   	  this.srandom( SEED );
-//   	  repeat ( TRANSACTION_COUNT1 ) begin
-//         extended1_timer_t_transaction ext_txn;
-//         ext_txn = extended1_timer_t_transaction::type_id::create("ext_txn");
-//   	    if ( !this.randomize() ) begin
-//   	      `uvm_error( "body:", "Failed to randomize!" )
-//   	    end
-//   	    create_and_finish_item();
-//   	  end
-//   	endtask: body
-// endclass: new_timer_t_sequence_rand
-
 class new_timer_t_sequence_rand extends random1_timer_t_sequence;
     `uvm_object_utils( new_timer_t_sequence_rand )
 
@@ -182,7 +156,7 @@ class new_timer_t_sequence_rand extends random1_timer_t_sequence;
 
     task body();
         REQ item;
-        repeat ( TRANSACTION_COUNT1 ) begin
+        repeat ( TRANSACTION_COUNT ) begin
             item = extended1_timer_t_transaction::type_id::create("item");
 
             start_item(item);

@@ -32,7 +32,7 @@ endproperty
 property addrOORResponse;
     @(posedge CLK)
     disable iff ($isunknown(RST) || RST === RST_ACT_LEVEL)
-    (ADDRESS > 8'h14) |-> ##1 (RESPONSE === CP_RSP_OOR);
+    (ADDRESS > 8'h14 && (REQUEST == CP_REQ_READ || REQUEST == CP_REQ_WRITE)) |-> ##1 (RESPONSE === CP_RSP_OOR);
 endproperty
 
 property signalsKnownInactiveReset;

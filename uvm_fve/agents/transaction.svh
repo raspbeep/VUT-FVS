@@ -116,14 +116,49 @@ class extended_timer_t_transaction extends timer_t_transaction;
         super.new(name);
     endfunction : new
 
-    
-    constraint valid_burst_length {
-        burst_length inside {[1:16]};
+    constraint reset_weights {
+        RST dist {RST_ACT_LEVEL := 1, ~RST_ACT_LEVEL := 20};
     }
 
-    constraint address_constraint {
-        ADDRESS[1:0] == 2'b00;
-        ADDRESS[31:0] < 32'h17;
+    constraint address_weights {
+        ADDRESS dist {
+            TIMER_CNT := 7,
+            TIMER_CMP := 6,
+            TIMER_CR := 5,
+            TIMER_CYCLE_L := 2,
+            TIMER_CYCLE_H := 2,
+            
+            // all the gaps between the addresses
+            [TIMER_CNT + 1 : TIMER_CMP - 1] := 1,
+            [TIMER_CMP + 1 : TIMER_CR - 1] := 1,
+            // includes the address gap 0x0c
+            [TIMER_CR + 1 : TIMER_CYCLE_L - 1] := 1,
+            [TIMER_CYCLE_L + 1 : TIMER_CYCLE_H - 1] := 1,
+            // rest of the valid range
+            // register address range is limited to 2B, 0xff is the upper bound
+            [TIMER_CYCLE_H + 1 : 8'hff] := 1
+        };
+    }
+
+    constraint request_weights {
+        REQUEST dist {
+            CP_REQ_NONE := 10,
+            CP_REQ_READ := 5,
+            CP_REQ_WRITE := 5,
+            CP_REQ_RESERVED := 1
+        };
+    }
+    
+    constraint data_in_weights {
+        DATA_IN dist {
+            0 := 10,
+            [1:20] := 20,
+            [21:(2**DATA_WIDTH - 1)] :/ 1
+        };
+    }
+
+    constraint valid_burst_length {
+        burst_length inside {[1:16]};
     }
 
     constraint enable_implication {
